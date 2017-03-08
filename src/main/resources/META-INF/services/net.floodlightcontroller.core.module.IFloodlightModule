@@ -30,3 +30,4 @@ net.floodlightcontroller.learningswitch.LearningSwitch
 net.floodlightcontroller.statistics.StatisticsCollector
 net.floodlightcontroller.routing.RoutingManager
 net.floodlightcontroller.forwarding.MplsForwarding
+net.floodlightcontroller.dhcpserver.DHCPProxy

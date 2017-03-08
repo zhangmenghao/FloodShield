@@ -79,15 +79,7 @@ import org.projectfloodlight.openflow.protocol.errormsg.OFFlowModFailedErrorMsg;
 import org.projectfloodlight.openflow.protocol.instruction.OFInstruction;
 import org.projectfloodlight.openflow.protocol.match.Match;
 import org.projectfloodlight.openflow.protocol.match.MatchField;
-import org.projectfloodlight.openflow.types.DatapathId;
-import org.projectfloodlight.openflow.types.EthType;
-import org.projectfloodlight.openflow.types.IpProtocol;
-import org.projectfloodlight.openflow.types.OFAuxId;
-import org.projectfloodlight.openflow.types.OFBufferId;
-import org.projectfloodlight.openflow.types.OFGroup;
-import org.projectfloodlight.openflow.types.OFPort;
-import org.projectfloodlight.openflow.types.TableId;
-import org.projectfloodlight.openflow.types.U64;
+import org.projectfloodlight.openflow.types.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -534,31 +526,60 @@ public class OFSwitchHandshakeHandler implements IOFConnectionListener {
 			}
 			this.sw.write(flows);
 			
-			Match.Builder mb1 = this.sw.getOFFactory().buildMatch();
-			mb1.setExact(MatchField.ETH_TYPE, EthType.IPv4);
-			mb1.setExact(MatchField.IP_PROTO, IpProtocol.UDP);
-			mb1.setExact(MatchField.UDP_SRC, UDP.DHCP_SERVER_PORT);
-			mb1.setExact(MatchField.UDP_DST, UDP.DHCP_CLIENT_PORT);
-			OFFlowAdd defaultFlow1 = this.factory.buildFlowAdd()
-					.setMatch(mb1.build())
-					.setTableId(TableId.of(0))
-					.setPriority(2)
-					.setActions(actions)
-					.build();
-			this.sw.write(defaultFlow1);
+//			Match.Builder mb1 = this.sw.getOFFactory().buildMatch();
+//			mb1.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+//			mb1.setExact(MatchField.IP_PROTO, IpProtocol.UDP);
+//			mb1.setExact(MatchField.UDP_SRC, UDP.DHCP_SERVER_PORT);
+//			mb1.setExact(MatchField.UDP_DST, UDP.DHCP_CLIENT_PORT);
+//			OFFlowAdd defaultFlow1 = this.factory.buildFlowAdd()
+//					.setMatch(mb1.build())
+//					.setTableId(TableId.of(0))
+//					.setPriority(2)
+//					.setActions(actions)
+//					.build();
+//			this.sw.write(defaultFlow1);
 			
 			Match.Builder mb2 = this.sw.getOFFactory().buildMatch();
 			mb2.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+
 			mb2.setExact(MatchField.IP_PROTO, IpProtocol.UDP);
 			mb2.setExact(MatchField.UDP_SRC, UDP.DHCP_CLIENT_PORT);
 			mb2.setExact(MatchField.UDP_DST, UDP.DHCP_SERVER_PORT);
 			OFFlowAdd defaultFlow2 = this.factory.buildFlowAdd()
 					.setMatch(mb2.build())
 					.setTableId(TableId.of(0))
-					.setPriority(2)
+					.setPriority(1)
 					.setActions(actions)
 					.build();
 			this.sw.write(defaultFlow2);
+
+			/**
+			 * watch dhcp request discovery
+			 */
+			Match.Builder mb3 = this.sw.getOFFactory().buildMatch();
+			mb3.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+			mb3.setExact(MatchField.IPV4_DST, IPv4Address.of("255.255.255.255"));
+			mb3.setExact(MatchField.IP_PROTO, IpProtocol.UDP);
+			mb3.setExact(MatchField.UDP_SRC, UDP.DHCP_CLIENT_PORT);
+			mb3.setExact(MatchField.UDP_DST, UDP.DHCP_SERVER_PORT);
+
+			List<OFAction> actions3 = new ArrayList<OFAction>();
+			OFActionOutput.Builder aob3 = sw.getOFFactory().actions().buildOutput();
+			aob3.setPort(OFPort.ALL);
+			aob3.setMaxLen(Integer.MAX_VALUE);
+			actions3.add(aob3.build());
+
+			OFFlowAdd defaultFlow3 = this.factory.buildFlowAdd()
+					.setMatch(mb3.build())
+					.setTableId(TableId.of(0))
+					.setPriority(2)
+					.setActions(actions3)
+					.build();
+
+
+
+			this.sw.write(defaultFlow3);
+
 			
 		}
 	}

@@ -946,7 +946,7 @@ public class DHCPServer implements IOFMessageListener, IFloodlightModule, IDHCPS
 							for (DHCPOption option : options) {
 								if (option.getCode() == DHCP_REQ_PARAM_OPTION_CODE_REQUESTED_IP) {
 									desiredIPAddr = IPv4Address.of(option.getData());
-									log.debug("Got requested IP");
+									log.info("Got requested IP " + desiredIPAddr.toString());
 								} else if (option.getCode() == DHCP_REQ_PARAM_OPTION_CODE_REQUESTED_PARAMTERS) {
 									log.debug("Got requested param list");
 									requestOrder = getRequestedParameters(DHCPPayload, false); 		
@@ -1013,7 +1013,7 @@ public class DHCPServer implements IOFMessageListener, IFloodlightModule, IDHCPS
 							for (DHCPOption option : options) {
 								if (option.getCode() == DHCP_REQ_PARAM_OPTION_CODE_REQUESTED_IP) {
 									desiredIPAddr = IPv4Address.of(option.getData());
-									log.debug("desireip "+desiredIPAddr + " out " + instance.getPool());
+									log.info("desireip "+desiredIPAddr + " out " + instance.getPool());
 									//instance.getPool().getDHCPbindingFromMAC(chaddr).getIPv4Address()
 									/*if (!desiredIPAddr.equals(instance.getPool().getDHCPbindingFromMAC(chaddr).getIPv4Address())) {
 										// This client wants a different IP than what we have on file, so cancel its HOLD lease now (if we have one)
@@ -1083,7 +1083,7 @@ public class DHCPServer implements IOFMessageListener, IFloodlightModule, IDHCPS
 							if (dhcpbt.ishavaMac(chaddr)){
 								if (!dhcpbt.getItemStatus(chaddr)){
 									DHCPBindingItem item= dhcpbt.setItemStatus(chaddr,true);
-									pushBindingFlow(sw, inPort, chaddr, IPv4SrcAddr);
+									pushBindingFlow(sw, inPort, chaddr, desiredIPAddr);
 									//flow-add
 								}
 							}

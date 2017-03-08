@@ -17,15 +17,8 @@
 
 package net.floodlightcontroller.forwarding;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.floodlightcontroller.core.FloodlightContext;
@@ -46,11 +39,7 @@ import net.floodlightcontroller.devicemanager.IDeviceService;
 import net.floodlightcontroller.devicemanager.SwitchPort;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryListener;
 import net.floodlightcontroller.linkdiscovery.ILinkDiscoveryService;
-import net.floodlightcontroller.packet.Ethernet;
-import net.floodlightcontroller.packet.IPv4;
-import net.floodlightcontroller.packet.IPv6;
-import net.floodlightcontroller.packet.TCP;
-import net.floodlightcontroller.packet.UDP;
+import net.floodlightcontroller.packet.*;
 import net.floodlightcontroller.routing.ForwardingBase;
 import net.floodlightcontroller.routing.IRoutingDecision;
 import net.floodlightcontroller.routing.IRoutingDecisionChangedListener;
@@ -105,6 +94,9 @@ import org.python.google.common.collect.ImmutableList;
 import org.python.google.common.collect.Maps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static net.floodlightcontroller.dhcpserver.DHCPServer.DHCP_MSG_TYPE_ACK;
+import static net.floodlightcontroller.dhcpserver.DHCPServer.DHCP_MSG_TYPE_OFFER;
 
 public class MplsForwarding extends ForwardingBase implements IFloodlightModule, IOFSwitchListener, ILinkDiscoveryListener, IRoutingDecisionChangedListener {
     protected static final Logger log = LoggerFactory.getLogger(MplsForwarding.class);
@@ -241,13 +233,53 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
     
     @Override
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
+
         switch (msg.getType()) {
         case PACKET_IN:
             IRoutingDecision decision = null;
             if (cntx != null) {
                 decision = RoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION);
             }
-            
+            Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
+            OFPacketIn pi = (OFPacketIn) msg;
+            if(this.isDhcpServerPacket(eth)) {
+
+                OFPort srcPort = OFMessageUtils.getInPort(pi);
+                DatapathId srcSw = sw.getId();
+                IDevice dstDevice = IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_DST_DEVICE);
+                SwitchPort dstAp = null;
+
+                if (dstDevice == null) {
+                    log.info("Destination device unknown. Flooding packet");
+
+                    doFlood(sw, pi, RoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION), cntx);
+                    return Command.STOP;
+                }
+
+                for (SwitchPort ap : dstDevice.getAttachmentPoints()) {
+                    if (topologyService.isEdge(ap.getNodeId(), ap.getPortId())) {
+                        dstAp = ap;
+                        break;
+                    }
+                }
+
+                Path path = routingEngineService.getPath(srcSw,
+                        srcPort,
+                        dstAp.getNodeId(),
+                        dstAp.getPortId());
+
+                List<NodePortTuple> switchPortList = path.getPath();
+                int indx = switchPortList.size() - 1;
+                DatapathId switchDPID = switchPortList.get(indx).getNodeId();
+                IOFSwitch sw_o = switchService.getSwitch(switchDPID);
+                OFPort outPort = switchPortList.get(indx).getPortId();
+
+                pushPacket(sw_o, pi, outPort, true, cntx);
+                log.info("push packet to " + sw_o.getId());
+
+                return Command.STOP;
+            }
+
             return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
             
 		case FLOW_REMOVED:
@@ -303,7 +335,7 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
     	
     }
     
-    public boolean isDhcpPacket(Ethernet eth){
+    public boolean isDhcpServerPacket(Ethernet eth){
     	if (eth.getEtherType() == EthType.IPv4) { /* shallow compare is okay for EthType */
 			IPv4 IPv4Payload = (IPv4) eth.getPayload();
 			if (IPv4Payload.getProtocol() == IpProtocol.UDP) { /* shallow compare also okay for IpProtocol */
@@ -312,7 +344,11 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
 						|| UDPPayload.getDestinationPort().equals(UDP.DHCP_CLIENT_PORT))
 						&& (UDPPayload.getSourcePort().equals(UDP.DHCP_SERVER_PORT)
 								|| UDPPayload.getSourcePort().equals(UDP.DHCP_CLIENT_PORT))){
-					return true;
+                    DHCP DHCPPayload = (DHCP) UDPPayload.getPayload();
+				    if(Arrays.equals(DHCPPayload.getOption(DHCP.DHCPOptionCode.OptionCode_MessageType).getData(), DHCP_MSG_TYPE_ACK) ||
+                            Arrays.equals(DHCPPayload.getOption(DHCP.DHCPOptionCode.OptionCode_MessageType).getData(), DHCP_MSG_TYPE_OFFER) ) {
+                        return true;
+                    }
 				}
 			}
     	}
@@ -366,7 +402,7 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
             }
 
             if (eth.isBroadcast() || eth.isMulticast()) {
-            	if (isDhcpPacket(eth)){
+            	if (isDhcpServerPacket(eth)){
             		//do nothing
             	}
             	else{
