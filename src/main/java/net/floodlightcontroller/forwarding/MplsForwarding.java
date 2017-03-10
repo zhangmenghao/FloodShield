@@ -21,6 +21,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
+import net.floodlightcontroller.config.DDosProtectionConfig;
 import net.floodlightcontroller.core.FloodlightContext;
 import net.floodlightcontroller.core.IFloodlightProviderService;
 import net.floodlightcontroller.core.IOFSwitch;
@@ -224,6 +225,28 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
     
     @Override
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
+
+        // StaticConfig Test
+        DDosProtectionConfig.parseXmlData("xmltest");
+        Match.Builder mb5 = sw.getOFFactory().buildMatch();
+        List<OFAction> actions3 = new ArrayList<OFAction>();
+        OFActionOutput.Builder aob3 = sw.getOFFactory().actions().buildOutput();
+        aob3.setPort(OFPort.CONTROLLER);
+        aob3.setMaxLen(Integer.MAX_VALUE);
+        actions3.add(aob3.build());
+
+        for(DDosProtectionConfig.StaticConfigItem item: DDosProtectionConfig.staticConfigs) {
+            mb5.setExact(MatchField.ETH_SRC, MacAddress.of(item.getMAC()));
+            OFFlowAdd defaultFlow5 = sw.getOFFactory().buildFlowAdd()
+                    .setMatch(mb5.build())
+                    .setTableId(TableId.of(0))
+                    .setPriority(0)
+                    .setActions(actions3)
+                    .build();
+            IOFSwitch s_t = switchService.getSwitch(DatapathId.of(item.getSwID()));
+            s_t.write(defaultFlow5);
+        }
+        // test over
 
         switch (msg.getType()) {
         case PACKET_IN:
@@ -1488,6 +1511,8 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
         if (REMOVE_FLOWS_ON_LINK_OR_PORT_DOWN) {
             linkService.addListener(this);
         }
+
+
     }
 
     @Override

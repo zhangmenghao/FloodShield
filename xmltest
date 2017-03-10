@@ -1,0 +1,10 @@
+<all>
+<StaticConfig>
+    <item SWID="00:00:00:00:00:01" MAC="00:00:00:00:00:02" IP="192.168.100.1"> </item>
+    <item SWID="00:00:00:00:00:02" MAC="00:00:00:00:00:02" IP="192.168.100.1"> </item>
+    <item SWID="00:00:00:00:00:03" MAC="00:00:00:00:00:02" IP="192.168.100.1"> </item>
+</StaticConfig>
+<packetIn>
+    <threshold>100</threshold>
+</packetIn>
+</all>
