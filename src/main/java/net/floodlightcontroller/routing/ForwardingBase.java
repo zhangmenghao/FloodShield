@@ -303,13 +303,12 @@ public abstract class ForwardingBase implements IOFMessageListener {
         if (pi == null) {
             return;
         }
-
         // The assumption here is (sw) is the switch that generated the
         // packet-in. If the input port is the same as output port, then
         // the packet-out should be ignored.
         if ((pi.getVersion().compareTo(OFVersion.OF_12) < 0 ? pi.getInPort() : pi.getMatch().get(MatchField.IN_PORT)).equals(outport)) {
             if (log.isDebugEnabled()) {
-                log.debug("Attempting to do packet-out to the same " +
+                log.info("Attempting to do packet-out to the same " +
                         "interface as packet-in. Dropping packet. " +
                         " SrcSwitch={}, pi={}",
                         new Object[]{sw, pi});

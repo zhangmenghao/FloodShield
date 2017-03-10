@@ -489,7 +489,8 @@ public class OFSwitchHandshakeHandler implements IOFConnectionListener {
 			ArrayList<OFAction> actions = new ArrayList<OFAction>(1);
 			actions.add(factory.actions().output(OFPort.CONTROLLER, 0xffFFffFF));
 			ArrayList<OFMessage> flows = new ArrayList<OFMessage>();
-
+			Match.Builder mb = this.sw.getOFFactory().buildMatch();
+			mb.setExact(MatchField.ETH_TYPE, EthType.LLDP);
 			/* If we received a table features reply, iterate over the tables */
 			if (!this.sw.getTables().isEmpty()) {
 				short missCount = 0;
@@ -502,6 +503,7 @@ public class OFSwitchHandshakeHandler implements IOFConnectionListener {
 								OFFlowAdd defaultFlow = this.factory.buildFlowAdd()
 										.setTableId(tid)
 										.setPriority(0)
+										.setMatch(mb.build())
 										.setInstructions(Collections.singletonList((OFInstruction) this.factory.instructions().buildApplyActions().setActions(actions).build()))
 										.build();
 								flows.add(defaultFlow);
@@ -519,6 +521,7 @@ public class OFSwitchHandshakeHandler implements IOFConnectionListener {
 								.setTableId(TableId.of(tid))
 								.setPriority(0)
 								.setActions(actions)
+								.setMatch(mb.build())
 								.build();
 						flows.add(defaultFlow);
 					}
@@ -538,41 +541,42 @@ public class OFSwitchHandshakeHandler implements IOFConnectionListener {
 //					.setActions(actions)
 //					.build();
 //			this.sw.write(defaultFlow1);
-			
+
+			// dhcp reply
 			Match.Builder mb2 = this.sw.getOFFactory().buildMatch();
 			mb2.setExact(MatchField.ETH_TYPE, EthType.IPv4);
 
 			mb2.setExact(MatchField.IP_PROTO, IpProtocol.UDP);
-			mb2.setExact(MatchField.UDP_SRC, UDP.DHCP_CLIENT_PORT);
-			mb2.setExact(MatchField.UDP_DST, UDP.DHCP_SERVER_PORT);
+			mb2.setExact(MatchField.UDP_SRC, UDP.DHCP_SERVER_PORT);
+			mb2.setExact(MatchField.UDP_DST, UDP.DHCP_CLIENT_PORT);
 			OFFlowAdd defaultFlow2 = this.factory.buildFlowAdd()
 					.setMatch(mb2.build())
 					.setTableId(TableId.of(0))
-					.setPriority(1)
+					.setPriority(0)
 					.setActions(actions)
 					.build();
 			this.sw.write(defaultFlow2);
 
 			/**
-			 * watch dhcp request discovery
+			 * watch dhcp request
 			 */
 			Match.Builder mb3 = this.sw.getOFFactory().buildMatch();
 			mb3.setExact(MatchField.ETH_TYPE, EthType.IPv4);
-			mb3.setExact(MatchField.IPV4_DST, IPv4Address.of("255.255.255.255"));
+			//mb3.setExact(MatchField.IPV4_DST, IPv4Address.of("255.255.255.255"));
 			mb3.setExact(MatchField.IP_PROTO, IpProtocol.UDP);
 			mb3.setExact(MatchField.UDP_SRC, UDP.DHCP_CLIENT_PORT);
 			mb3.setExact(MatchField.UDP_DST, UDP.DHCP_SERVER_PORT);
 
 			List<OFAction> actions3 = new ArrayList<OFAction>();
 			OFActionOutput.Builder aob3 = sw.getOFFactory().actions().buildOutput();
-			aob3.setPort(OFPort.ALL);
+			aob3.setPort(OFPort.CONTROLLER);
 			aob3.setMaxLen(Integer.MAX_VALUE);
 			actions3.add(aob3.build());
 
 			OFFlowAdd defaultFlow3 = this.factory.buildFlowAdd()
 					.setMatch(mb3.build())
 					.setTableId(TableId.of(0))
-					.setPriority(2)
+					.setPriority(0)
 					.setActions(actions3)
 					.build();
 
@@ -580,6 +584,16 @@ public class OFSwitchHandshakeHandler implements IOFConnectionListener {
 
 			this.sw.write(defaultFlow3);
 
+			// default ARP
+			Match.Builder mb4 = this.sw.getOFFactory().buildMatch();
+			mb4.setExact(MatchField.ETH_TYPE, EthType.ARP);
+			OFFlowAdd defaultFlow4 = this.factory.buildFlowAdd()
+					.setMatch(mb4.build())
+					.setTableId(TableId.of(0))
+					.setPriority(0)
+					.setActions(actions3)
+					.build();
+			this.sw.write(defaultFlow4);
 			
 		}
 	}

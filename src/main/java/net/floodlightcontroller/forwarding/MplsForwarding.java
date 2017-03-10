@@ -55,17 +55,7 @@ import net.floodlightcontroller.util.OFPortMode;
 import net.floodlightcontroller.util.OFPortModeTuple;
 import net.floodlightcontroller.util.ParseUtils;
 
-import org.projectfloodlight.openflow.protocol.OFFlowMod;
-import org.projectfloodlight.openflow.protocol.OFFlowModCommand;
-import org.projectfloodlight.openflow.protocol.OFFlowModFlags;
-import org.projectfloodlight.openflow.protocol.OFFlowRemoved;
-import org.projectfloodlight.openflow.protocol.OFGroupType;
-import org.projectfloodlight.openflow.protocol.OFMessage;
-import org.projectfloodlight.openflow.protocol.OFPacketIn;
-import org.projectfloodlight.openflow.protocol.OFPacketOut;
-import org.projectfloodlight.openflow.protocol.OFPortDesc;
-import org.projectfloodlight.openflow.protocol.OFType;
-import org.projectfloodlight.openflow.protocol.OFVersion;
+import org.projectfloodlight.openflow.protocol.*;
 import org.projectfloodlight.openflow.protocol.action.OFAction;
 import org.projectfloodlight.openflow.protocol.action.OFActionOutput;
 import org.projectfloodlight.openflow.protocol.action.OFActionPopMpls;
@@ -132,6 +122,7 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
     private static final long FLOWSET_MASK = ((1L << FLOWSET_BITS) - 1) << FLOWSET_SHIFT;
     private static final long FLOWSET_MAX = (long) (Math.pow(2, FLOWSET_BITS) - 1);
     protected static FlowSetIdRegistry flowSetIdRegistry;
+    private DHCPBindingTable dhcpBindingTable;
 	protected FlowTable flowtable;
 	protected PacketinCount pic;
 
@@ -242,18 +233,23 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
             }
             Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
             OFPacketIn pi = (OFPacketIn) msg;
-            if(this.isDhcpServerPacket(eth)) {
-
+            DHCP dhcpPayload = this.getDHCPPayload(eth);
+            if(dhcpPayload != null) {
+                if(!this.isDHCPServerPacket(dhcpPayload)) {
+                    log.info("DHCP REQUEST" + " sw:" + sw.getId() + " inport:" + OFMessageUtils.getInPort(pi));
+                    doFlood(sw,pi,decision,cntx);
+                    return Command.CONTINUE;
+                }
+                log.info("DHCP SERVER");
                 OFPort srcPort = OFMessageUtils.getInPort(pi);
                 DatapathId srcSw = sw.getId();
                 IDevice dstDevice = IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_DST_DEVICE);
                 SwitchPort dstAp = null;
-
                 if (dstDevice == null) {
                     log.info("Destination device unknown. Flooding packet");
 
                     doFlood(sw, pi, RoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION), cntx);
-                    return Command.STOP;
+                    break;
                 }
 
                 for (SwitchPort ap : dstDevice.getAttachmentPoints()) {
@@ -274,12 +270,18 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
                 IOFSwitch sw_o = switchService.getSwitch(switchDPID);
                 OFPort outPort = switchPortList.get(indx).getPortId();
 
-                pushPacket(sw_o, pi, outPort, true, cntx);
-                log.info("push packet to " + sw_o.getId());
+                this.pushDHCPReplyToClient(sw_o,pi,outPort,cntx);
+                log.info("push packet to " + sw_o.getId() + " oport: " + outPort.toString()
+                + " inport:" +srcPort.toString());
 
-                return Command.STOP;
+                this.writeIPMACBindFlowToSw(sw_o, dhcpPayload.getYourIPAddress(), dhcpPayload.getClientHardwareAddress());
+
+                dhcpBindingTable.addnewItem(dhcpPayload.getClientHardwareAddress(), sw_o, outPort,
+                        dhcpPayload.getYourIPAddress());
+
+                dhcpBindingTable.printBindStatus();
+                break;
             }
-
             return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
             
 		case FLOW_REMOVED:
@@ -291,6 +293,52 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
         return Command.CONTINUE;
     }
 
+    private void pushDHCPReplyToClient(IOFSwitch sw, OFPacketIn pi, OFPort outport, FloodlightContext cntx) {
+        OFPacketOut.Builder pob = sw.getOFFactory().buildPacketOut();
+        List<OFAction> actions = new ArrayList<OFAction>();
+        actions.add(sw.getOFFactory().actions().output(outport, Integer.MAX_VALUE));
+        pob.setActions(actions);
+        pob.setBufferId(OFBufferId.NO_BUFFER);
+        if (pob.getBufferId().equals(OFBufferId.NO_BUFFER)) {
+            byte[] packetData = pi.getData();
+            pob.setData(packetData);
+        }
+        messageDamper.write(sw, pob.build());
+    }
+
+    private void writeIPMACBindFlowToSw(IOFSwitch sw, IPv4Address ip, MacAddress mac) {
+        Match.Builder mb = sw.getOFFactory().buildMatch();
+        mb.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+        mb.setExact(MatchField.IPV4_SRC, ip);
+        mb.setExact(MatchField.ETH_SRC, mac);
+
+        Match.Builder mb2 = sw.getOFFactory().buildMatch();
+        mb2.setExact(MatchField.ETH_TYPE, EthType.ARP);
+       // mb2.setExact(MatchField.ETH_SRC, mac);
+
+        List<OFAction> actions = new ArrayList<OFAction>();
+        OFActionOutput.Builder aob = sw.getOFFactory().actions().buildOutput();
+        aob.setPort(OFPort.CONTROLLER);
+        aob.setMaxLen(Integer.MAX_VALUE);
+        actions.add(aob.build());
+
+        OFFlowAdd defaultFlow3 = sw.getOFFactory().buildFlowAdd()
+                .setMatch(mb.build())
+                .setTableId(TableId.of(0))
+                .setPriority(1)
+                .setActions(actions)
+                .build();
+
+        OFFlowAdd defaultFlow2 = sw.getOFFactory().buildFlowAdd()
+                .setMatch(mb2.build())
+                .setTableId(TableId.of(0))
+                .setPriority(1)
+                .setActions(actions)
+                .build();
+
+        sw.write(defaultFlow3);
+        sw.write(defaultFlow2);
+    }
     private net.floodlightcontroller.core.IListener.Command processFlowRemovedMessage(IOFSwitch sw, OFFlowRemoved msg,
 			FloodlightContext cntx) {
     	//long t1 = System.nanoTime();
@@ -335,7 +383,7 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
     	
     }
     
-    public boolean isDhcpServerPacket(Ethernet eth){
+    public DHCP getDHCPPayload(Ethernet eth){
     	if (eth.getEtherType() == EthType.IPv4) { /* shallow compare is okay for EthType */
 			IPv4 IPv4Payload = (IPv4) eth.getPayload();
 			if (IPv4Payload.getProtocol() == IpProtocol.UDP) { /* shallow compare also okay for IpProtocol */
@@ -345,14 +393,20 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
 						&& (UDPPayload.getSourcePort().equals(UDP.DHCP_SERVER_PORT)
 								|| UDPPayload.getSourcePort().equals(UDP.DHCP_CLIENT_PORT))){
                     DHCP DHCPPayload = (DHCP) UDPPayload.getPayload();
-				    if(Arrays.equals(DHCPPayload.getOption(DHCP.DHCPOptionCode.OptionCode_MessageType).getData(), DHCP_MSG_TYPE_ACK) ||
-                            Arrays.equals(DHCPPayload.getOption(DHCP.DHCPOptionCode.OptionCode_MessageType).getData(), DHCP_MSG_TYPE_OFFER) ) {
-                        return true;
-                    }
+				    return DHCPPayload;
 				}
 			}
+			return null;
     	}
-    	return false;
+    	return null;
+    }
+
+    private boolean isDHCPServerPacket(DHCP pi) {
+        if(Arrays.equals(pi.getOption(DHCP.DHCPOptionCode.OptionCode_MessageType).getData(), DHCP_MSG_TYPE_ACK) ||
+                Arrays.equals(pi.getOption(DHCP.DHCPOptionCode.OptionCode_MessageType).getData(), DHCP_MSG_TYPE_OFFER) ) {
+            return true;
+        }
+        return false;
     }
     
 	@Override
@@ -402,7 +456,7 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
             }
 
             if (eth.isBroadcast() || eth.isMulticast()) {
-            	if (isDhcpServerPacket(eth)){
+            	if (getDHCPPayload(eth) != null){
             		//do nothing
             	}
             	else{
@@ -1310,6 +1364,7 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
         super.init();
         flowtable = new FlowTable();
         pic = new PacketinCount();
+        dhcpBindingTable = new DHCPBindingTable();
         this.floodlightProviderService = context.getServiceImpl(IFloodlightProviderService.class);
         this.deviceManagerService = context.getServiceImpl(IDeviceService.class);
         this.routingEngineService = context.getServiceImpl(IRoutingService.class);

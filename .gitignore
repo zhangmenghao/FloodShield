@@ -1,2 +1,6 @@
 *.class
 *.jar
+.settings/
+.idea
+.idea/*
+!.gitignore
