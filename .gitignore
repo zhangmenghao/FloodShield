@@ -1,6 +1,9 @@
 *.class
-*.jar
+target/*.jar
 .settings/
+floodlight.iml
+.classpath
+.project
 .idea
 .idea/*
 !.gitignore
