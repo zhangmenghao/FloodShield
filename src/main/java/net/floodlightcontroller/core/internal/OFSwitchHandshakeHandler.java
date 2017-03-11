@@ -25,6 +25,10 @@ import net.floodlightcontroller.core.internal.OFSwitchAppHandshakePlugin.PluginR
 import net.floodlightcontroller.packet.UDP;
 import net.floodlightcontroller.staticentry.IStaticEntryPusherService;
 
+//config test
+import net.floodlightcontroller.config.DDosProtectionConfig;
+//
+
 import org.projectfloodlight.openflow.protocol.OFActionType;
 import org.projectfloodlight.openflow.protocol.OFBadRequestCode;
 import org.projectfloodlight.openflow.protocol.OFBarrierReply;
@@ -319,6 +323,8 @@ public class OFSwitchHandshakeHandler implements IOFConnectionListener {
 			}
 		}
 
+
+
 		/**
 		 * Called if we receive an  error message. If the xid matches the
 		 * pending request we handle it otherwise we ignore it. We also
@@ -594,6 +600,7 @@ public class OFSwitchHandshakeHandler implements IOFConnectionListener {
 					.setActions(actions3)
 					.build();
 			this.sw.write(defaultFlow4);
+
 			
 		}
 	}
