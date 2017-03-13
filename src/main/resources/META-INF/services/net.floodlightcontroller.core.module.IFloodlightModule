@@ -31,3 +31,4 @@ net.floodlightcontroller.statistics.StatisticsCollector
 net.floodlightcontroller.routing.RoutingManager
 net.floodlightcontroller.forwarding.MplsForwarding
 net.floodlightcontroller.dhcpserver.DHCPProxy
+net.floodlightcontroller.config.DDosProtectionConfig
