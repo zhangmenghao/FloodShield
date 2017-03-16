@@ -1,0 +1,47 @@
+------------------------------------------------------------
+Client connecting to 10.0.0.150, TCP port 5001
+TCP window size: 85.3 KByte (default)
+------------------------------------------------------------
+[ 23] local 10.0.0.151 port 51192 connected with 10.0.0.150 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[ 23]  0.0-30.0 sec   124 GBytes  35.5 Gbits/sec
+[ 23] 30.0-60.0 sec   111 GBytes  31.8 Gbits/sec
+[ 23] 60.0-90.0 sec   114 GBytes  32.6 Gbits/sec
+[ 23] 90.0-120.0 sec   103 GBytes  29.4 Gbits/sec
+[ 23] 120.0-150.0 sec  25.5 GBytes  7.31 Gbits/sec
+[ 23] 150.0-180.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 180.0-210.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 210.0-240.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 240.0-270.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 270.0-300.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 300.0-330.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 330.0-360.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 360.0-390.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 390.0-420.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 420.0-450.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 450.0-480.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 480.0-510.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 510.0-540.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 540.0-570.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 570.0-600.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 600.0-630.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 630.0-660.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 660.0-690.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 690.0-720.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 720.0-750.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 750.0-780.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 780.0-810.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 810.0-840.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 840.0-870.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 870.0-900.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 900.0-930.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 930.0-960.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 960.0-990.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 990.0-1020.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 1020.0-1050.0 sec  0.00 Bytes  0.00 bits/sec
+[ 23] 1050.0-1080.0 sec  0.00 (null)s  4919131752988806144 Bytes/sec
+[ 23] 1080.0-1110.0 sec  0.00 (null)s  4919131752988661760 Bytes/sec
+[ 23] 1110.0-1140.0 sec  0.00 (null)s  4919131752988661760 Bytes/sec
+[ 23] 1140.0-1170.0 sec  0.00 (null)s  4919131752988661760 Bytes/sec
+[ 23] 1170.0-1200.0 sec  0.00 (null)s  4919131752988661760 Bytes/sec
+[ 23]  0.0-1200.0 sec   477 GBytes  3.42 Gbits/sec
