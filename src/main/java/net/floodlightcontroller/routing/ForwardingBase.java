@@ -245,13 +245,14 @@ public abstract class ForwardingBase implements IOFMessageListener {
             .setBufferId(OFBufferId.NO_BUFFER)
             .setCookie(cookie)
             .setOutPort(outPort)
+                    //.setTableId(TableId.of(0))
             .setPriority(FLOWMOD_DEFAULT_PRIORITY);
 
             FlowModUtils.setActions(fmb, actions, sw);
 
             /* Configure for particular switch pipeline */
             if (sw.getOFFactory().getVersion().compareTo(OFVersion.OF_10) != 0) {
-                fmb.setTableId(FLOWMOD_DEFAULT_TABLE_ID);
+                fmb.setTableId(TableId.of(0));
             }
                         
             if (log.isTraceEnabled()) {

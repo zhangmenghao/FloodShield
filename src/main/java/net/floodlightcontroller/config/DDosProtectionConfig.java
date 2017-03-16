@@ -109,7 +109,7 @@ public class DDosProtectionConfig implements IOFMessageListener, IFloodlightModu
     }
     @Override
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
-        this.writeStaticConfig();
+       // this.writeStaticConfig();
         return Command.CONTINUE;
     }
 

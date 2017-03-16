@@ -1,8 +1,12 @@
 package net.floodlightcontroller.forwarding;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 
 public class PacketinCount {
+	protected static final Logger log = LoggerFactory.getLogger(PacketinCount.class);
 	protected HashMap<PacketinCountItem, Long> packettime;
 	protected HashMap<PacketinCountItem, Integer> packetcount;
 	
@@ -33,6 +37,7 @@ public class PacketinCount {
 				}
 				packettime.put(pci, new Long(System.currentTimeMillis()));
 				packetcount.put(pci, 0);
+				log.info("src_ip:"+pci.getIpv4()+" counts {} , times {}",countss,(System.currentTimeMillis() - packettime.get(pci)));
 			}
 		}
 		return false;

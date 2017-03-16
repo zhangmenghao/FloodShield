@@ -56,6 +56,7 @@ import net.floodlightcontroller.routing.IRoutingDecision;
 import net.floodlightcontroller.routing.IRoutingDecisionChangedListener;
 import net.floodlightcontroller.routing.IRoutingService;
 import net.floodlightcontroller.routing.Path;
+import net.floodlightcontroller.routing.RoutingDecision;
 import net.floodlightcontroller.topology.ITopologyService;
 import net.floodlightcontroller.util.FlowModUtils;
 import net.floodlightcontroller.util.OFDPAUtils;
@@ -66,6 +67,7 @@ import net.floodlightcontroller.util.ParseUtils;
 
 import org.projectfloodlight.openflow.protocol.OFFlowMod;
 import org.projectfloodlight.openflow.protocol.OFFlowModCommand;
+import org.projectfloodlight.openflow.protocol.OFFlowRemoved;
 import org.projectfloodlight.openflow.protocol.OFGroupType;
 import org.projectfloodlight.openflow.protocol.OFMessage;
 import org.projectfloodlight.openflow.protocol.OFPacketIn;
@@ -118,7 +120,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
      * or need to allow for a larger number of routing decisions
      * or flowsets
      */
-
+    private static final boolean SPEED_MONITOR = true;
     private static final short DECISION_BITS = 24;
     private static final short DECISION_SHIFT = 0;
     private static final long DECISION_MASK = ((1L << DECISION_BITS) - 1) << DECISION_SHIFT;
@@ -128,6 +130,9 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     private static final long FLOWSET_MASK = ((1L << FLOWSET_BITS) - 1) << FLOWSET_SHIFT;
     private static final long FLOWSET_MAX = (long) (Math.pow(2, FLOWSET_BITS) - 1);
     protected static FlowSetIdRegistry flowSetIdRegistry;
+
+    private DHCPPacketProcessor dhcpPacketProcessor;
+    private PacketInMonitor packetInMonitor;
 
     protected static class FlowSetIdRegistry {
         private volatile Map<NodePortTuple, Set<U64>> nptToFlowSetIds;
@@ -223,11 +228,45 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
             }
         }
     }//end this class
+    @Override
+    public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
+
+        switch (msg.getType()) {
+            case PACKET_IN:
+                IRoutingDecision decision = null;
+                if (cntx != null) {
+                    decision = RoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION);
+                }
+                if(this.dhcpPacketProcessor.doDHCPPacketProcess(sw,msg,cntx)) break;
+                if(this.dhcpPacketProcessor.isDHCPPacket(IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD))) {
+                    log.info("request");
+                    doFlood(sw,(OFPacketIn)msg,decision,cntx);
+                }
+                return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
+            case FLOW_REMOVED:
+            default:
+                break;
+        }
+        return Command.CONTINUE;
+    }
 
     @Override
     public Command processPacketInMessage(IOFSwitch sw, OFPacketIn pi, IRoutingDecision decision, FloodlightContext cntx) {
         Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
         // We found a routing decision (i.e. Firewall is enabled... it's the only thing that makes RoutingDecisions)
+        if (eth.getEtherType() == EthType.IPv4 && SPEED_MONITOR) {
+            OFPort srcPort = OFMessageUtils.getInPort(pi);
+            DatapathId srcSw = sw.getId();
+            IPv4 ip = (IPv4) eth.getPayload();
+            IPv4Address srcIp = ip.getSourceAddress();
+            this.packetInMonitor.doMonitor(sw,srcPort,srcSw,srcIp,ip,decision);
+            //new Thread(new monitor(sw, srcPort, srcSw ,ip ,srcIp ,decision)).start();
+        	/*if (pic.update(new PacketinCountItem(srcSw, srcPort, srcIp))){
+        		doDropIp(sw, srcPort, srcIp, decision);
+        	}
+        	//counts = counts +1;
+        	log.info(srcSw + " " + srcPort + " "+srcIp+"  aaa");*/
+        }
         if (decision != null) {
             if (log.isTraceEnabled()) {
                 log.trace("Forwarding decision={} was made for PacketIn={}", decision.getRoutingAction().toString(), pi);
@@ -735,6 +774,11 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         this.linkService = context.getServiceImpl(ILinkDiscoveryService.class);
 
         flowSetIdRegistry = FlowSetIdRegistry.getInstance();
+
+        this.dhcpPacketProcessor = new DHCPPacketProcessor();
+        this.dhcpPacketProcessor.registerForwardingModule(this.switchService,this.routingEngineService,this.topologyService,this.messageDamper);
+        this.packetInMonitor = new PacketInMonitor();
+        this.packetInMonitor.registerPacketInMonitor(this.switchService);
 
         Map<String, String> configParameters = context.getConfigParams(this);
         String tmp = configParameters.get("hard-timeout");

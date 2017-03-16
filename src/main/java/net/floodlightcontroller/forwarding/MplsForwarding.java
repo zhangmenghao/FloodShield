@@ -88,6 +88,7 @@ import org.slf4j.LoggerFactory;
 
 import static net.floodlightcontroller.dhcpserver.DHCPServer.DHCP_MSG_TYPE_ACK;
 import static net.floodlightcontroller.dhcpserver.DHCPServer.DHCP_MSG_TYPE_OFFER;
+import static net.floodlightcontroller.forwarding.Forwarding.flowSetIdRegistry;
 
 public class MplsForwarding extends ForwardingBase implements IFloodlightModule, IOFSwitchListener, ILinkDiscoveryListener, IRoutingDecisionChangedListener {
     protected static final Logger log = LoggerFactory.getLogger(MplsForwarding.class);
@@ -123,7 +124,8 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
     private static final long FLOWSET_MASK = ((1L << FLOWSET_BITS) - 1) << FLOWSET_SHIFT;
     private static final long FLOWSET_MAX = (long) (Math.pow(2, FLOWSET_BITS) - 1);
     protected static FlowSetIdRegistry flowSetIdRegistry;
-    private DHCPBindingTable dhcpBindingTable;
+    private DHCPPacketProcessor dhcpPacketProcessor;
+    private PacketInMonitor packetInMonitor;
 	protected FlowTable flowtable;
 	protected PacketinCount pic;
 
@@ -232,56 +234,10 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
             if (cntx != null) {
                 decision = RoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION);
             }
-            Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
-            OFPacketIn pi = (OFPacketIn) msg;
-            DHCP dhcpPayload = this.getDHCPPayload(eth);
-            if(dhcpPayload != null) {
-                if(!this.isDHCPServerPacket(dhcpPayload)) {
-                    log.info("DHCP REQUEST" + " sw:" + sw.getId() + " inport:" + OFMessageUtils.getInPort(pi));
-                    doFlood(sw,pi,decision,cntx);
-                    return Command.CONTINUE;
-                }
-                log.info("DHCP SERVER");
-                OFPort srcPort = OFMessageUtils.getInPort(pi);
-                DatapathId srcSw = sw.getId();
-                IDevice dstDevice = IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_DST_DEVICE);
-                SwitchPort dstAp = null;
-                if (dstDevice == null) {
-                    log.info("Destination device unknown. Flooding packet");
-
-                    doFlood(sw, pi, RoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION), cntx);
-                    break;
-                }
-
-                for (SwitchPort ap : dstDevice.getAttachmentPoints()) {
-                    if (topologyService.isEdge(ap.getNodeId(), ap.getPortId())) {
-                        dstAp = ap;
-                        break;
-                    }
-                }
-
-                Path path = routingEngineService.getPath(srcSw,
-                        srcPort,
-                        dstAp.getNodeId(),
-                        dstAp.getPortId());
-
-                List<NodePortTuple> switchPortList = path.getPath();
-                int indx = switchPortList.size() - 1;
-                DatapathId switchDPID = switchPortList.get(indx).getNodeId();
-                IOFSwitch sw_o = switchService.getSwitch(switchDPID);
-                OFPort outPort = switchPortList.get(indx).getPortId();
-
-                this.pushDHCPReplyToClient(sw_o,pi,outPort,cntx);
-                log.info("push packet to " + sw_o.getId() + " oport: " + outPort.toString()
-                + " inport:" +srcPort.toString());
-
-                this.writeIPMACBindFlowToSw(sw_o, dhcpPayload.getYourIPAddress(), dhcpPayload.getClientHardwareAddress());
-
-                dhcpBindingTable.addnewItem(dhcpPayload.getClientHardwareAddress(), sw_o, outPort,
-                        dhcpPayload.getYourIPAddress());
-
-                dhcpBindingTable.printBindStatus();
-                break;
+            if(this.dhcpPacketProcessor.doDHCPPacketProcess(sw,msg,cntx)) break;
+            if(this.dhcpPacketProcessor.isDHCPPacket(IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD))) {
+                log.info("request");
+                doFlood(sw,(OFPacketIn)msg,decision,cntx);
             }
             return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
             
@@ -419,7 +375,8 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
             DatapathId srcSw = sw.getId();
         	IPv4 ip = (IPv4) eth.getPayload();
         	IPv4Address srcIp = ip.getSourceAddress();
-        	new Thread(new monitor(sw, srcPort, srcSw ,ip ,srcIp ,decision)).start();
+        	this.packetInMonitor.doMonitor(sw,srcPort,srcSw,srcIp,ip,decision);
+        	//new Thread(new monitor(sw, srcPort, srcSw ,ip ,srcIp ,decision)).start();
         	/*if (pic.update(new PacketinCountItem(srcSw, srcPort, srcIp))){
         		doDropIp(sw, srcPort, srcIp, decision);
         	}
@@ -526,6 +483,26 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
     protected U64 makeForwardingCookie(IRoutingDecision decision, U64 flowSetId) {
         long user_fields = 0;
 
+        U64 decision_cookie = (decision == null) ? null : decision.getDescriptor();
+        if (decision_cookie != null) {
+            user_fields |= AppCookie.extractUser(decision_cookie) & DECISION_MASK;
+        }
+
+        if (flowSetId != null) {
+            user_fields |= AppCookie.extractUser(flowSetId) & FLOWSET_MASK;
+        }
+
+        // TODO: Mask in any other required fields here
+
+        if (user_fields == 0) {
+            return DEFAULT_FORWARDING_COOKIE;
+        }
+        return AppCookie.makeCookie(FORWARDING_APP_ID, user_fields);
+    }
+
+    public U64 makeCookie(IRoutingDecision decision) {
+        long user_fields = 0;
+        U64 flowSetId = flowSetIdRegistry.generateFlowSetId();
         U64 decision_cookie = (decision == null) ? null : decision.getDescriptor();
         if (decision_cookie != null) {
             user_fields |= AppCookie.extractUser(decision_cookie) & DECISION_MASK;
@@ -1365,7 +1342,6 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
         super.init();
         flowtable = new FlowTable();
         pic = new PacketinCount();
-        dhcpBindingTable = new DHCPBindingTable();
         this.floodlightProviderService = context.getServiceImpl(IFloodlightProviderService.class);
         this.deviceManagerService = context.getServiceImpl(IDeviceService.class);
         this.routingEngineService = context.getServiceImpl(IRoutingService.class);
@@ -1375,6 +1351,11 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
         this.linkService = context.getServiceImpl(ILinkDiscoveryService.class);
 
         flowSetIdRegistry = FlowSetIdRegistry.getInstance();
+
+        this.dhcpPacketProcessor = new DHCPPacketProcessor();
+        this.dhcpPacketProcessor.registerForwardingModule(this.switchService,this.routingEngineService,this.topologyService,this.messageDamper);
+        this.packetInMonitor = new PacketInMonitor();
+        this.packetInMonitor.registerPacketInMonitor(this.switchService);
 
         Map<String, String> configParameters = context.getConfigParams(this);
         String tmp = configParameters.get("hard-timeout");
@@ -1489,6 +1470,7 @@ public class MplsForwarding extends ForwardingBase implements IFloodlightModule,
         if (REMOVE_FLOWS_ON_LINK_OR_PORT_DOWN) {
             linkService.addListener(this);
         }
+
 
 
     }
