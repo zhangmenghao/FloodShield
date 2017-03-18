@@ -18,6 +18,7 @@ public class SwitchStatisticsWebRoutable implements RestletRoutable {
         router.attach("/bandwidth/{" + DPID_STR + "}/{" + PORT_STR + "}/json", BandwidthResource.class);
         router.attach("/config/enable/json", ConfigResource.class);
         router.attach("/config/disable/json", ConfigResource.class);
+        router.attach("/flow/statistics/json", FlowEntryResource.class);
         return router;
     }
 

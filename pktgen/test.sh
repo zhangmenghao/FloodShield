@@ -58,7 +58,7 @@ function pg() {
     for (( i=1; i<10000; i++ ));do
 	PGDEV=/proc/net/pktgen/h2-eth0
 	
-	SPEED=`expr 1000 + $SPEED`
+	SPEED=`expr 100 + $SPEED`
 	DELAY=`expr ${BASIC_DELAY} / $SPEED`
 	PPS=`expr ${SPEED} \* ${BASIC_SPEED}`
 	if [ $PPS -gt 50000000 ];then
@@ -72,13 +72,15 @@ function pg() {
 	pgset "delay $DELAY"	
 	
 	PGDEV=/proc/net/pktgen/pgctrl   
+	#mark start
+	echo ${PPS} >> $DATA
 	pgset "start"
 	
 	CONTENT=`cat /proc/net/pktgen/h2-eth0`
 	echo $CONTENT
-	echo ${PPS} >> $DATA
+
 	echo 'sleep ${BLOCK_TIME}s'
-	#echo 'sleep' >> $DATA	
+	echo 'sleep' >> $DATA
 	sleep ${BLOCK_TIME}s
 	echo 'wake up'
     done    

@@ -4,6 +4,7 @@ import java.util.Collections;
 
 import net.floodlightcontroller.statistics.IStatisticsService;
 
+import org.restlet.resource.Get;
 import org.restlet.resource.Post;
 import org.restlet.resource.Put;
 import org.restlet.resource.ServerResource;
@@ -12,6 +13,7 @@ public class ConfigResource extends ServerResource {
 
 	@Post
 	@Put
+	@Get("json")
 	public Object config() {
 		IStatisticsService statisticsService = (IStatisticsService) getContext().getAttributes().get(IStatisticsService.class.getCanonicalName());
 
