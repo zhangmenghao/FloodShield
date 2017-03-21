@@ -12,5 +12,6 @@
   <logger name="net.floodlightcontroller" level="INFO"/>
   <logger name="org.sdnplatform" level="INFO"/>
   <logger name="net.floodlightcontroller.dhcpserver" level="INFO"/>
+  <logger name="net.floodlightcontroller.forwarding" level="INFO"/>
   
 </configuration>

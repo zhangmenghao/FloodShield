@@ -9,6 +9,7 @@ import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
 import net.floodlightcontroller.core.module.IFloodlightService;
 import net.floodlightcontroller.core.types.NodePortTuple;
+import net.floodlightcontroller.forwarding.Forwarding;
 import net.floodlightcontroller.restserver.IRestApiService;
 import net.floodlightcontroller.statistics.web.SwitchStatisticsWebRoutable;
 import net.floodlightcontroller.threadpool.IThreadPoolService;
@@ -16,6 +17,7 @@ import org.projectfloodlight.openflow.protocol.*;
 import org.projectfloodlight.openflow.protocol.match.Match;
 import org.projectfloodlight.openflow.protocol.ver13.OFMeterSerializerVer13;
 import org.projectfloodlight.openflow.types.DatapathId;
+import org.projectfloodlight.openflow.types.IPv4Address;
 import org.projectfloodlight.openflow.types.OFGroup;
 import org.projectfloodlight.openflow.types.OFPort;
 import org.projectfloodlight.openflow.types.TableId;
@@ -29,6 +31,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import javax.sound.midi.MidiDevice.Info;
+
 public class StatisticsCollector implements IFloodlightModule, IStatisticsService {
 	private static final Logger log = LoggerFactory.getLogger(StatisticsCollector.class);
 
@@ -38,19 +42,22 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 
 	private static boolean isEnabled = true;//modify 
 	
-	private static int portStatsInterval = 10; /* could be set by REST API, so not final */
+	private static int portStatsInterval = 2; /* could be set by REST API, so not final */
 	private static int flowStatsInterval = 2; /* could be set by REST API, so not final */
 	private static ScheduledFuture<?> portStatsCollector;
 	private static ScheduledFuture<?> flowStatsCollector;
+	private static ScheduledFuture<?> hostStatsCollector;
 	private static final long BITS_PER_BYTE = 8;
 	private static final long MILLIS_PER_SEC = 1000;
 	
 	private static final String INTERVAL_PORT_STATS_STR = "collectionIntervalPortStatsSeconds";
-	private static final String ENABLED_STR = "enable";
+	private static final String ENABLED_STR = "TRUE";
 
 	private static final HashMap<NodePortTuple, SwitchPortBandwidth> portStats = new HashMap<NodePortTuple, SwitchPortBandwidth>();
 	private static final HashMap<NodePortTuple, SwitchPortBandwidth> tentativePortStats = new HashMap<NodePortTuple, SwitchPortBandwidth>();
-	public  HashMap<DatapathId, OFSwitchFlowStatistics> switchFlowStatisticsHashMap;
+	public static HashMap<DatapathId, OFSwitchFlowStatistics> switchFlowStatisticsHashMap;
+	public static HashMap<IPv4Address, HostFlowStatistics> hostFlowStatisticHashMap;
+	
 	/**
 	 * Run periodically to collect all port statistics. This only collects
 	 * bandwidth stats right now, but it could be expanded to record other
@@ -132,26 +139,73 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 		}
 	}
 
+	private class HostStatsCollector implements Runnable {
+		@Override
+		public void run() {
+			Map<DatapathId, List<OFStatsReply>> replies = getSwitchStatistics(switchService.getAllSwitchDpids(), OFStatsType.FLOW);
+			log.info("invoke host-stats-collector");
+			log.info("size is " + replies.size());
+			int rank = 0;
+			HashMap<IPv4Address, HostFlowStatistics> map = new HashMap<IPv4Address, HostFlowStatistics>();
+			for (Entry<DatapathId, List<OFStatsReply>> e : replies.entrySet()) {
+				for (OFStatsReply reply : e.getValue()) {
+					OFFlowStatsReply fsr = (OFFlowStatsReply) reply;
+					for (OFFlowStatsEntry pse : fsr.getEntries()) {
+						rank += 1;
+						Match match = pse.getMatch();
+						String mid = match.toString() + e.getKey().toString();
+						if (pse.getHardTimeout() == 0 && pse.getIdleTimeout() == 0)
+							continue;
+						if (Forwarding.flowHostMap.containsKey(mid)) {
+							IPv4Address ip = Forwarding.flowHostMap.get(mid);
+							if (!map.containsKey(ip)) {
+								HostFlowStatistics hostStats = new HostFlowStatistics();
+								map.put(ip, hostStats);
+							}
+							map.get(ip).updateByEntry(pse);
+						} else {
+							log.error("flowHostMap lost match!!! " + mid);
+						}
+					}
+				}
+			}
+			log.info("entry sum is " + rank);
+			
+			// update global hostFlowStatisticHashMap
+			for (IPv4Address ip : hostFlowStatisticHashMap.keySet()) {
+				log.info("invoke=== host-stats-collector");
+				if (map.containsKey(ip)) {
+					hostFlowStatisticHashMap.get(ip).update(map.get(ip));
+				} else {
+					hostFlowStatisticHashMap.get(ip).setFlowNumber(0);
+					hostFlowStatisticHashMap.get(ip).setLimit(16);
+				}
+				log.info("ip = " + ip.toString() + " limit = " + hostFlowStatisticHashMap.get(ip).getLimit() + " number = " 
+				+ hostFlowStatisticHashMap.get(ip).getNumber());
+			}
+		}
+	}
+	
 	private class TableCollector implements Runnable {
 		@Override
 		public void run() {
 			Map<DatapathId, List<OFStatsReply>> replies = getSwitchStatistics(switchService.getAllSwitchDpids(), OFStatsType.FLOW);
-			log.info("collect collect flow");
-			log.info("datapathid size {}",replies.entrySet().size());
+//			log.info("collect collect flow");
+//			log.info("datapathid size {}",replies.entrySet().size());
 			for (Entry<DatapathId, List<OFStatsReply>> e : replies.entrySet()) {
-				log.info("datapathid {} reply size {}", e.getValue(), e.getValue().size());
+//				log.info("reply size {} datapathid {}", e.getValue().size(), e.getValue());
 				if(switchFlowStatisticsHashMap.containsKey(e.getKey())) {
-					//log.info("contain");
+//					log.info("contain");
 					switchFlowStatisticsHashMap.get(e.getKey()).updateStasticsByReplies(e.getValue());
 				}
 				else {
-				//	log.info("no contain");
+//					log.info("no contain");
 					OFSwitchFlowStatistics statistics = new OFSwitchFlowStatistics();
-					//log.info("update ");
+//					log.info("update ");
 					statistics.updateStasticsByReplies(e.getValue());
-				//	log.info("update over");
+//					log.info("update over");
 					switchFlowStatisticsHashMap.put(e.getKey(), statistics);
-				//	log.info("put over");
+//					log.info("put over");
 				}
 			}
 		}
@@ -237,6 +291,7 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 		log.info("Statistics collection {}", isEnabled ? "enabled" : "disabled");
 
 		if (config.containsKey(INTERVAL_PORT_STATS_STR)) {
+			log.info("contain key port stats");
 			try {
 				portStatsInterval = Integer.parseInt(config.get(INTERVAL_PORT_STATS_STR).trim());
 			} catch (Exception e) {
@@ -245,6 +300,7 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 		}
 
 		this.switchFlowStatisticsHashMap = new HashMap<DatapathId, OFSwitchFlowStatistics>();
+		this.hostFlowStatisticHashMap = new HashMap<IPv4Address, HostFlowStatistics>();
 		log.info("Port statistics collection interval set to {}s", portStatsInterval);
 	}
 
@@ -294,6 +350,8 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 	private void startStatisticsCollection() {
 	//	portStatsCollector = threadPoolService.getScheduledExecutor().scheduleAtFixedRate(new PortStatsCollector(), portStatsInterval, portStatsInterval, TimeUnit.SECONDS);
 		flowStatsCollector = threadPoolService.getScheduledExecutor().scheduleAtFixedRate(new TableCollector(), flowStatsInterval, flowStatsInterval, TimeUnit.SECONDS);
+		hostStatsCollector = threadPoolService.getScheduledExecutor().scheduleAtFixedRate(new HostStatsCollector(), flowStatsInterval, flowStatsInterval, TimeUnit.SECONDS);
+		
 		tentativePortStats.clear(); /* must clear out, otherwise might have huge BW result if present and wait a long time before re-enabling stats */
 		log.warn("Statistics collection thread(s) started");
 	}
@@ -303,9 +361,14 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 	 */
 	private void stopStatisticsCollection() {
 		if (!flowStatsCollector.cancel(false)) {
-			log.error("Could not cancel port stats thread");
+			log.error("Could not cancel flow stats thread");
 		} else {
-			log.warn("Statistics collection thread(s) stopped");
+			log.warn("Flow Statistics collection thread(s) stopped");
+		}
+		if (!hostStatsCollector.cancel(false)) {
+			log.error("Could not cancel host stats thread");
+		} else {
+			log.warn("Host Statistics collection thread(s) stopped");
 		}
 	}
 

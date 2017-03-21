@@ -9,8 +9,8 @@ total_invalid_rate_list = list()
 total_flow_number_list = list()
 pps_file = "a.txt"
 sleep_time = 2
-ave_time = 14
-retrive_time = 15
+ave_time = 5
+retrive_time = 5
 
 
 def get_invalid_rate_and_fnmb():
@@ -48,7 +48,7 @@ for i in range(retrive_time):
     pps = get_pps(pps_file)
     while pps == "" or pps == "sleep" or pps == "sleep\n":
         time.sleep(1)
-        print pps
+        print pps + "reread"
         pps = get_pps(pps_file)
     # every time fetch ave_time
     for j in range(ave_time):
@@ -106,8 +106,6 @@ print total_flow_nmb_unique_list
 print pps_list
 print pps_unique_list
 print invalid_unique_rate
-#plt.plot(pps_unique_list, invalid_unique_rate, 'r')
-#plt.xlim(X.min() * 1.1, X.max() * 1.1)
-#plt.ylim(0 , 1)
+
 plt.plot(pps_unique_list, total_flow_nmb_unique_list, 'g')
 plt.show()

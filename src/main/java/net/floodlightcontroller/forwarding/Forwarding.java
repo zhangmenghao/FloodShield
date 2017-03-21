@@ -20,6 +20,7 @@ package net.floodlightcontroller.forwarding;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -57,6 +58,10 @@ import net.floodlightcontroller.routing.IRoutingDecisionChangedListener;
 import net.floodlightcontroller.routing.IRoutingService;
 import net.floodlightcontroller.routing.Path;
 import net.floodlightcontroller.routing.RoutingDecision;
+import net.floodlightcontroller.statistics.HostFlowStatistics;
+import net.floodlightcontroller.statistics.OFSwitchFlowStatistics;
+import net.floodlightcontroller.statistics.StatisticsCollector;
+import net.floodlightcontroller.statistics.web.FlowEntryResource;
 import net.floodlightcontroller.topology.ITopologyService;
 import net.floodlightcontroller.util.FlowModUtils;
 import net.floodlightcontroller.util.OFDPAUtils;
@@ -133,6 +138,8 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 
     private DHCPPacketProcessor dhcpPacketProcessor;
     private PacketInMonitor packetInMonitor;
+    
+    public static HashMap<String, IPv4Address> flowHostMap;
 
     protected static class FlowSetIdRegistry {
         private volatile Map<NodePortTuple, Set<U64>> nptToFlowSetIds;
@@ -253,19 +260,18 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     @Override
     public Command processPacketInMessage(IOFSwitch sw, OFPacketIn pi, IRoutingDecision decision, FloodlightContext cntx) {
         Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
-        // We found a routing decision (i.e. Firewall is enabled... it's the only thing that makes RoutingDecisions)
-        if (eth.getEtherType() == EthType.IPv4 && !SPEED_MONITOR) {
-            OFPort srcPort = OFMessageUtils.getInPort(pi);
-            DatapathId srcSw = sw.getId();
-            IPv4 ip = (IPv4) eth.getPayload();
-            IPv4Address srcIp = ip.getSourceAddress();
-            this.packetInMonitor.doMonitor(sw,srcPort,srcSw,srcIp,ip,decision);
-            //new Thread(new monitor(sw, srcPort, srcSw ,ip ,srcIp ,decision)).start();
-        	/*if (pic.update(new PacketinCountItem(srcSw, srcPort, srcIp))){
-        		doDropIp(sw, srcPort, srcIp, decision);
+        // query switch-host-window-map, get limit & num
+        boolean flag = true;
+        if (eth.getEtherType() == EthType.IPv4) {
+        	IPv4 ip = (IPv4) eth.getPayload();
+        	IPv4Address srcIp = ip.getSourceAddress();
+        	log.info("ip = " + srcIp.toString());
+        	if (StatisticsCollector.hostFlowStatisticHashMap.containsKey(srcIp)) {
+        		HostFlowStatistics entry = StatisticsCollector.hostFlowStatisticHashMap.get(srcIp);
+        		flag = entry.forwardFlow();
+        		log.info("host " + srcIp.toString() + " flag = " + flag);
+        		entry.print();
         	}
-        	//counts = counts +1;
-        	log.info(srcSw + " " + srcPort + " "+srcIp+"  aaa");*/
         }
         if (decision != null) {
             if (log.isTraceEnabled()) {
@@ -278,7 +284,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 return Command.CONTINUE;
             case FORWARD_OR_FLOOD:
             case FORWARD:
-                doForwardFlow(sw, pi, decision, cntx, false);
+            	if (flag) doForwardFlow(sw, pi, decision, cntx, false);
                 return Command.CONTINUE;
             case MULTICAST:
                 // treat as broadcast
@@ -299,7 +305,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
             if (eth.isBroadcast() || eth.isMulticast()) {
                 doFlood(sw, pi, decision, cntx);
             } else {
-                doForwardFlow(sw, pi, decision, cntx, false);
+            	if (flag) doForwardFlow(sw, pi, decision, cntx, false);
             }
         }
 
@@ -527,7 +533,6 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 dstAp.getPortId());
 
         Match m = createMatchFromPacket(sw, srcPort, pi, cntx);
-
         if (! path.getPath().isEmpty()) {
             if (log.isDebugEnabled()) {
                 log.debug("pushRoute inPort={} route={} " +
@@ -537,7 +542,23 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                                 dstAp.getPortId()});
                 log.debug("Creating flow rules on the route, match rule: {}", m);
             }
-
+            // add match-ipv4address item to flowHostMap
+            Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
+            IPv4Address srcIp = null;
+            if (eth.getEtherType() == EthType.IPv4) {
+                IPv4 ip = (IPv4) eth.getPayload();
+                srcIp = ip.getSourceAddress();
+                String mid = m.toString() + sw.getId().toString();
+                if (!flowHostMap.containsKey(mid)) {
+                	flowHostMap.put(mid, srcIp);
+                	if (StatisticsCollector.hostFlowStatisticHashMap.containsKey(srcIp))
+                		StatisticsCollector.hostFlowStatisticHashMap.get(srcIp).addFlowNumber();
+                	log.info("add match " + mid + " ip = " + srcIp.toString());
+                }
+            } else {
+            	log.error("eth not ipv4");
+            }
+            
             pushRoute(path, m, pi, sw.getId(), cookie, 
                     cntx, requestFlowRemovedNotifn,
                     OFFlowModCommand.ADD);	
@@ -566,7 +587,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     protected Match createMatchFromPacket(IOFSwitch sw, OFPort inPort, OFPacketIn pi, FloodlightContext cntx) {
         // The packet in match will only contain the port number.
         // We need to add in specifics for the hosts we're routing between.
-        Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
+    	Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
 
         VlanVid vlan = null;      
         if (pi.getVersion().compareTo(OFVersion.OF_11) > 0 && /* 1.0 and 1.1 do not have a match */
@@ -779,6 +800,8 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         this.dhcpPacketProcessor.registerForwardingModule(this.switchService,this.routingEngineService,this.topologyService,this.messageDamper);
         this.packetInMonitor = new PacketInMonitor();
         this.packetInMonitor.registerPacketInMonitor(this.switchService);
+        
+        this.flowHostMap = new HashMap<String, IPv4Address>();
 
         Map<String, String> configParameters = context.getConfigParams(this);
         String tmp = configParameters.get("hard-timeout");

@@ -19,6 +19,9 @@ import net.floodlightcontroller.routing.IRoutingDecision;
 import net.floodlightcontroller.routing.IRoutingService;
 import net.floodlightcontroller.routing.Path;
 import net.floodlightcontroller.routing.RoutingDecision;
+import net.floodlightcontroller.statistics.HostFlowStatistics;
+import net.floodlightcontroller.statistics.OFSwitchFlowStatistics;
+import net.floodlightcontroller.statistics.StatisticsCollector;
 import net.floodlightcontroller.topology.ITopologyService;
 import net.floodlightcontroller.util.OFMessageDamper;
 import net.floodlightcontroller.util.OFMessageUtils;
@@ -43,6 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import static net.floodlightcontroller.dhcpserver.DHCPServer.DHCP_MSG_TYPE_ACK;
@@ -154,12 +158,12 @@ public class DHCPPacketProcessor {
             IOFSwitch sw_o = switchService.getSwitch(switchDPID);
             OFPort outPort = switchPortList.get(indx).getPortId();
 
+            // add new ip into statistics
+            HostFlowStatistics entry = new HostFlowStatistics();
+            StatisticsCollector.hostFlowStatisticHashMap.put(dhcpPayload.getYourIPAddress(), entry);
+            
             this.pushDHCPReplyToClient(sw_o,pi,outPort,cntx);
-            log.info("push packet to " + sw_o.getId() + " oport: " + outPort.toString()
-                             + " inport:" +srcPort.toString());
-
             this.writeIPMACBindFlowToSw(sw_o, dhcpPayload.getYourIPAddress(), dhcpPayload.getClientHardwareAddress());
-
             this.dhcpBindingTable.addnewItem(dhcpPayload.getClientHardwareAddress(), sw_o, outPort,
                                         dhcpPayload.getYourIPAddress());
 
@@ -210,6 +214,15 @@ public class DHCPPacketProcessor {
                 .setPriority(1)
                 .setActions(actions)
                 .build();
+        
+//        Match m1 = mb.build();
+//        Match m2 = mb2.build();
+//        if (!Forwarding.flowHostMap.containsKey(m1.toString())) {
+//        	Forwarding.flowHostMap.put(m1.toString(), ip);
+//        }
+//        if (!Forwarding.flowHostMap.containsKey(m2.toString())) {
+//        	Forwarding.flowHostMap.put(m2.toString(), ip);
+//        }
 
         sw.write(defaultFlow3);
         sw.write(defaultFlow2);

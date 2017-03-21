@@ -108,7 +108,6 @@ public class OFSwitchFlowStatistics {
             this.low_used_flow_nmb =  0;
             this.hard_flow_nmb = 0;
             this.high_used_flow_nmb = 0;
-           // log.info("reply size{}", replies.size());
             for (OFStatsReply r : replies) {
                 OFFlowStatsReply fsr = (OFFlowStatsReply) r;
                 updateStastics(fsr);
