@@ -1,7 +1,7 @@
 #!/bin/sh
 # pktgen.conf -- Sample configuration for send on two devices on a UP system
 #modprobe pktgen
-function pgset(){
+function pgset() {
 	local result
         echo $1 > $PGDEV   
         result=`cat $PGDEV | fgrep "Result: OK:"`
@@ -27,27 +27,27 @@ function pg() {
 
     BASIC_DELAY=1000000000 #1pps
 	BASIC_SPEED=1    
-	SEND_TOTAL_TIME=20
-	BLOCK_TIME=10
+	SEND_TOTAL_TIME=10
+	BLOCK_TIME=5
 	DATA=a.txt
     	
     pgset "rem_device_all"
-    pgset "add_device h2-eth0"
+    pgset "add_device h3-eth0"
     pgset "max_before_softirq 10000"
     
     # Configure the individual devices
     echo "Configuring devices"
     
-    PGDEV=/proc/net/pktgen/h2-eth0
+    PGDEV=/proc/net/pktgen/h3-eth0
     
     pgset "clone_skb 0"
     pgset "pkt_size 60"
-    pgset "src_mac 00:00:00:00:00:02"
-    pgset "src_min 10.0.0.152"
-    pgset "src_max 10.0.0.152"
+    pgset "src_mac 00:00:00:00:00:03"
+    pgset "src_min 10.0.0.199"
+    pgset "src_max 10.0.0.199"
     pgset "dst_min 10.0.0.2"
     pgset "dst_max 10.255.255.255"
-    pgset "dst_mac 00:00:00:00:00:03"
+    pgset "dst_mac 00:00:00:00:00:04"
 
     
     # Time to run
@@ -56,7 +56,7 @@ function pg() {
     SPEED=2
     echo "Running... ctrl^C to stop"
     for (( i=1; i<10000; i++ ));do
-	PGDEV=/proc/net/pktgen/h2-eth0
+	PGDEV=/proc/net/pktgen/h3-eth0
 	
 	SPEED=`expr 100 + $SPEED`
 	DELAY=`expr ${BASIC_DELAY} / $SPEED`
@@ -76,7 +76,7 @@ function pg() {
 	echo ${PPS} >> $DATA
 	pgset "start"
 	
-	CONTENT=`cat /proc/net/pktgen/h2-eth0`
+	CONTENT=`cat /proc/net/pktgen/h3-eth0`
 	echo $CONTENT
 
 	echo 'sleep ${BLOCK_TIME}s'

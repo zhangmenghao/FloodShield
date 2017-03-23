@@ -71,7 +71,7 @@ public class DHCPPacketProcessor {
         this.messageDamper = messageDamper;
     }
 
-    public DHCP getDHCPPayload(Ethernet eth){
+    public DHCP getDHCPPayload(Ethernet eth) {
         if (eth.getEtherType() == EthType.IPv4) { /* shallow compare is okay for EthType */
             IPv4 IPv4Payload = (IPv4) eth.getPayload();
             if (IPv4Payload.getProtocol() == IpProtocol.UDP) { /* shallow compare also okay for IpProtocol */
@@ -154,6 +154,10 @@ public class DHCPPacketProcessor {
             IOFSwitch sw_o = switchService.getSwitch(switchDPID);
             OFPort outPort = switchPortList.get(indx).getPortId();
 
+            // add new ip into Forwarding.host-pi-map
+            if (!Forwarding.hostPacketInMap.containsKey(dhcpPayload.getYourIPAddress()))
+            	Forwarding.hostPacketInMap.put(dhcpPayload.getYourIPAddress(), new PacketInCollector(dhcpPayload.getYourIPAddress()));
+            
             this.pushDHCPReplyToClient(sw_o,pi,outPort,cntx);
             log.info("push packet to " + sw_o.getId() + " oport: " + outPort.toString()
                              + " inport:" +srcPort.toString());

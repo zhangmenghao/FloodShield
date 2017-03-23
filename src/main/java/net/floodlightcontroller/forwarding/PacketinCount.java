@@ -3,6 +3,7 @@ package net.floodlightcontroller.forwarding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class PacketinCount {
@@ -14,6 +15,7 @@ public class PacketinCount {
 		packettime = new HashMap<PacketinCountItem, Long> ();
 		packetcount = new HashMap<PacketinCountItem, Integer> ();
 	}
+	
 	
 	public synchronized boolean update(PacketinCountItem pci){
 		Object counts =  packetcount.get(pci);

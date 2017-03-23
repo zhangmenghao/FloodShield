@@ -20,6 +20,7 @@ package net.floodlightcontroller.forwarding;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -133,6 +134,8 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 
     private DHCPPacketProcessor dhcpPacketProcessor;
     private PacketInMonitor packetInMonitor;
+    
+    public static HashMap<IPv4Address, PacketInCollector> hostPacketInMap;
 
     protected static class FlowSetIdRegistry {
         private volatile Map<NodePortTuple, Set<U64>> nptToFlowSetIds;
@@ -254,18 +257,20 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     public Command processPacketInMessage(IOFSwitch sw, OFPacketIn pi, IRoutingDecision decision, FloodlightContext cntx) {
         Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
         // We found a routing decision (i.e. Firewall is enabled... it's the only thing that makes RoutingDecisions)
-        if (eth.getEtherType() == EthType.IPv4 && !SPEED_MONITOR) {
-            OFPort srcPort = OFMessageUtils.getInPort(pi);
-            DatapathId srcSw = sw.getId();
-            IPv4 ip = (IPv4) eth.getPayload();
-            IPv4Address srcIp = ip.getSourceAddress();
-            this.packetInMonitor.doMonitor(sw,srcPort,srcSw,srcIp,ip,decision);
-            //new Thread(new monitor(sw, srcPort, srcSw ,ip ,srcIp ,decision)).start();
-        	/*if (pic.update(new PacketinCountItem(srcSw, srcPort, srcIp))){
-        		doDropIp(sw, srcPort, srcIp, decision);
+//        if (eth.getEtherType() == EthType.IPv4 && !SPEED_MONITOR) {
+//            OFPort srcPort = OFMessageUtils.getInPort(pi);
+//            DatapathId srcSw = sw.getId();
+//            IPv4 ip = (IPv4) eth.getPayload();
+//            IPv4Address srcIp = ip.getSourceAddress();
+//            this.packetInMonitor.doMonitor(sw,srcPort,srcSw,srcIp,ip,decision);
+//        }
+        if (eth.getEtherType() == EthType.IPv4) {
+        	IPv4 ip = (IPv4) eth.getPayload();
+        	IPv4Address srcIp = ip.getSourceAddress();
+        	if (hostPacketInMap.containsKey(srcIp)) {
+        		hostPacketInMap.get(srcIp).updateRate(System.currentTimeMillis());
+        		if (!hostPacketInMap.get(srcIp).allowForward()) return Command.STOP;
         	}
-        	//counts = counts +1;
-        	log.info(srcSw + " " + srcPort + " "+srcIp+"  aaa");*/
         }
         if (decision != null) {
             if (log.isTraceEnabled()) {
@@ -779,6 +784,8 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         this.dhcpPacketProcessor.registerForwardingModule(this.switchService,this.routingEngineService,this.topologyService,this.messageDamper);
         this.packetInMonitor = new PacketInMonitor();
         this.packetInMonitor.registerPacketInMonitor(this.switchService);
+        
+        this.hostPacketInMap = new HashMap<IPv4Address, PacketInCollector>();
 
         Map<String, String> configParameters = context.getConfigParams(this);
         String tmp = configParameters.get("hard-timeout");
