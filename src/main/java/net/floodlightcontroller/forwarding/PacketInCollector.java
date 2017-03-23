@@ -54,20 +54,20 @@ public class PacketInCollector {
 	
 	public boolean allowForward() {
 		if (rate < 1000 && rate > 0)  {
-//			log.info("ip = " + ip + " allow = false");
 			return false;
 		}
 		if (numList.size() > 6) {
 			if (number > 40) {
-//				log.info("ip = " + ip + " allow = false");
 				return false;
 			}
 		}
-//		log.info("ip = " + ip + " allow = true");
 		return true;
 	}
 	
 	public synchronized void updateRate(long ts) {
+		if (rate == -1) {
+			rateLastTimeStamp = ts;
+		}
 		this.rateNumber += 1;
 		this.tempNum += 1;
 		if (rateNumber == 10) {
@@ -76,14 +76,18 @@ public class PacketInCollector {
 			rateNumber = 0;
 		}
 	}
-	public synchronized void addTempNum() {
-		this.tempNum += 1;
+	public synchronized void resetRate() {
+		this.rate = -1;
+		this.rateNumber = 0;
 	}
 	
 	Runnable runnable = new Runnable() {
         @Override
         public void run() {
     		numList.add(tempNum);
+    		if (System.currentTimeMillis() - rateLastTimeStamp > 1000) {
+    			resetRate();
+    		}
     		if (numList.size() > 5) {
             	log.info("udpate ip = " + ip.toString() + " number = " + number + " rate = " + rate);
     			number = numList.get(numList.size()-1) - numList.get(numList.size()-6);
@@ -92,11 +96,4 @@ public class PacketInCollector {
         }
 
     };
-
-	public synchronized void udpateNum() {
-		numList.add(tempNum);
-		tempNum = 0;
-		number = numList.get(numList.size()-1) - numList.get(numList.size()-5);
-		while (numList.size() > 6) numList.remove(0);
-	}
 }

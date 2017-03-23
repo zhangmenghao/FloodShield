@@ -36,7 +36,7 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 	private static IThreadPoolService threadPoolService;
 	private static IRestApiService restApiService;
 
-	private static boolean isEnabled = true;//modify 
+	private static boolean isEnabled = false;//modify 
 	
 	private static int portStatsInterval = 10; /* could be set by REST API, so not final */
 	private static int flowStatsInterval = 2; /* could be set by REST API, so not final */

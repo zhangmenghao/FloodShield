@@ -28,6 +28,8 @@ import org.projectfloodlight.openflow.protocol.OFPacketIn;
 import org.projectfloodlight.openflow.protocol.OFPacketOut;
 import org.projectfloodlight.openflow.protocol.action.OFAction;
 import org.projectfloodlight.openflow.protocol.action.OFActionOutput;
+import org.projectfloodlight.openflow.protocol.instruction.OFInstruction;
+import org.projectfloodlight.openflow.protocol.instruction.OFInstructionGotoTable;
 import org.projectfloodlight.openflow.protocol.match.Match;
 import org.projectfloodlight.openflow.protocol.match.MatchField;
 import org.projectfloodlight.openflow.types.DatapathId;
@@ -162,7 +164,7 @@ public class DHCPPacketProcessor {
             log.info("push packet to " + sw_o.getId() + " oport: " + outPort.toString()
                              + " inport:" +srcPort.toString());
 
-            this.writeIPMACBindFlowToSw(sw_o, dhcpPayload.getYourIPAddress(), dhcpPayload.getClientHardwareAddress());
+            this.writeIPMACBindFlowToSw(sw_o, dhcpPayload.getYourIPAddress(), dhcpPayload.getClientHardwareAddress(),outPort);
 
             this.dhcpBindingTable.addnewItem(dhcpPayload.getClientHardwareAddress(), sw_o, outPort,
                                         dhcpPayload.getYourIPAddress());
@@ -185,37 +187,98 @@ public class DHCPPacketProcessor {
         messageDamper.write(sw, pob.build());
     }
 
-    public void writeIPMACBindFlowToSw(IOFSwitch sw, IPv4Address ip, MacAddress mac) {
-        Match.Builder mb = sw.getOFFactory().buildMatch();
-        mb.setExact(MatchField.ETH_TYPE, EthType.IPv4);
-        mb.setExact(MatchField.IPV4_SRC, ip);
-        mb.setExact(MatchField.ETH_SRC, mac);
+    public void writeIPMACBindFlowToSw(IOFSwitch sw, IPv4Address ip, MacAddress mac, OFPort port) {
+    	// new version
+    	List<OFInstruction> instructions = new ArrayList<OFInstruction>();
+    	OFInstructionGotoTable.Builder ib = sw.getOFFactory().instructions().buildGotoTable();
+    	ib.setTableId(TableId.of(1));
+    	instructions.add(ib.build());
 
-        Match.Builder mb2 = sw.getOFFactory().buildMatch();
-        mb2.setExact(MatchField.ETH_TYPE, EthType.ARP);
-        // mb2.setExact(MatchField.ETH_SRC, mac);
+    	Match.Builder mb = sw.getOFFactory().buildMatch();
+    	mb.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+    	mb.setExact(MatchField.IPV4_SRC, ip);
+    	mb.setExact(MatchField.ETH_SRC, mac);
+    	mb.setExact(MatchField.IN_PORT, port);
 
-        List<OFAction> actions = new ArrayList<OFAction>();
-        OFActionOutput.Builder aob = sw.getOFFactory().actions().buildOutput();
-        aob.setPort(OFPort.CONTROLLER);
-        aob.setMaxLen(Integer.MAX_VALUE);
-        actions.add(aob.build());
+    	Match.Builder mb2 = sw.getOFFactory().buildMatch();
+    	mb2.setExact(MatchField.ETH_TYPE, EthType.ARP);
+    	mb2.setExact(MatchField.ETH_SRC, mac);
+    	mb2.setExact(MatchField.IN_PORT, port);
+	  
+		OFFlowAdd defaultFlow1 = sw.getOFFactory().buildFlowAdd()
+	    .setMatch(mb.build())
+	    .setTableId(TableId.of(0))
+	    .setPriority(2)
+	    .setInstructions(instructions)
+	    .build();
+	  
+	    OFFlowAdd defaultFlow2 = sw.getOFFactory().buildFlowAdd()
+	    .setMatch(mb.build())
+	    .setTableId(TableId.of(0))
+	    .setPriority(2)
+	    .setInstructions(instructions)
+	    .build();
+	    
+	    sw.write(defaultFlow1);
+	    sw.write(defaultFlow2);
+	    
+	    List<OFAction> actions = new ArrayList<OFAction>();
+    	Match.Builder mb3 = sw.getOFFactory().buildMatch();
+    	mb3.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+    	mb3.setExact(MatchField.IN_PORT, port);
 
-        OFFlowAdd defaultFlow3 = sw.getOFFactory().buildFlowAdd()
-                .setMatch(mb.build())
-                .setTableId(TableId.of(0))
-                .setPriority(1)
-                .setActions(actions)
-                .build();
-
-        OFFlowAdd defaultFlow2 = sw.getOFFactory().buildFlowAdd()
-                .setMatch(mb2.build())
-                .setTableId(TableId.of(0))
-                .setPriority(1)
-                .setActions(actions)
-                .build();
-
-        sw.write(defaultFlow3);
-        sw.write(defaultFlow2);
+    	Match.Builder mb4 = sw.getOFFactory().buildMatch();
+    	mb4.setExact(MatchField.ETH_TYPE, EthType.ARP);
+    	mb4.setExact(MatchField.IN_PORT, port);
+    	
+		OFFlowAdd defaultFlow3 = sw.getOFFactory().buildFlowAdd()
+		.setMatch(mb.build())
+		.setTableId(TableId.of(0))
+		.setPriority(1)
+		.setActions(actions)
+		.build();
+			  
+		OFFlowAdd defaultFlow4 = sw.getOFFactory().buildFlowAdd()
+		.setMatch(mb.build())
+		.setTableId(TableId.of(0))
+		.setPriority(1)
+		.setActions(actions)
+		.build();
+		
+		sw.write(defaultFlow3);
+		sw.write(defaultFlow4);
+    	
+    	// old version
+//        Match.Builder mb = sw.getOFFactory().buildMatch();
+//        mb.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+//        mb.setExact(MatchField.IPV4_SRC, ip);
+//        mb.setExact(MatchField.ETH_SRC, mac);
+//
+//        Match.Builder mb2 = sw.getOFFactory().buildMatch();
+//        mb2.setExact(MatchField.ETH_TYPE, EthType.ARP);
+//        // mb2.setExact(MatchField.ETH_SRC, mac);
+//
+//        List<OFAction> actions = new ArrayList<OFAction>();
+//        OFActionOutput.Builder aob = sw.getOFFactory().actions().buildOutput();
+//        aob.setPort(OFPort.CONTROLLER);
+//        aob.setMaxLen(Integer.MAX_VALUE);
+//        actions.add(aob.build());
+//
+//        OFFlowAdd defaultFlow3 = sw.getOFFactory().buildFlowAdd()
+//                .setMatch(mb.build())
+//                .setTableId(TableId.of(0))
+//                .setPriority(1)
+//                .setActions(actions)
+//                .build();
+//
+//        OFFlowAdd defaultFlow2 = sw.getOFFactory().buildFlowAdd()
+//                .setMatch(mb2.build())
+//                .setTableId(TableId.of(0))
+//                .setPriority(1)
+//                .setActions(actions)
+//                .build();
+//
+//        sw.write(defaultFlow3);
+//        sw.write(defaultFlow2);
     }
 }
