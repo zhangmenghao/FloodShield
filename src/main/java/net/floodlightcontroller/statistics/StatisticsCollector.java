@@ -36,21 +36,21 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 	private static IThreadPoolService threadPoolService;
 	private static IRestApiService restApiService;
 
-	private static boolean isEnabled = false;//modify 
+	private static boolean isEnabled = true;//modify 
 	
-	private static int portStatsInterval = 10; /* could be set by REST API, so not final */
+	private static int portStatsInterval = 2; /* could be set by REST API, so not final */
 	private static int flowStatsInterval = 2; /* could be set by REST API, so not final */
 	private static ScheduledFuture<?> portStatsCollector;
 	private static ScheduledFuture<?> flowStatsCollector;
 	private static final long BITS_PER_BYTE = 8;
 	private static final long MILLIS_PER_SEC = 1000;
 	
-	private static final String INTERVAL_PORT_STATS_STR = "collectionIntervalPortStatsSeconds";
-	private static final String ENABLED_STR = "enable";
+	private static final String INTERVAL_PORT_STATS_STR = "2";
+	private static final String ENABLED_STR = "true";
 
 	private static final HashMap<NodePortTuple, SwitchPortBandwidth> portStats = new HashMap<NodePortTuple, SwitchPortBandwidth>();
 	private static final HashMap<NodePortTuple, SwitchPortBandwidth> tentativePortStats = new HashMap<NodePortTuple, SwitchPortBandwidth>();
-	public  HashMap<DatapathId, OFSwitchFlowStatistics> switchFlowStatisticsHashMap;
+	public static HashMap<DatapathId, OFSwitchFlowStatistics> switchFlowStatisticsHashMap;
 	/**
 	 * Run periodically to collect all port statistics. This only collects
 	 * bandwidth stats right now, but it could be expanded to record other
@@ -136,22 +136,16 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 		@Override
 		public void run() {
 			Map<DatapathId, List<OFStatsReply>> replies = getSwitchStatistics(switchService.getAllSwitchDpids(), OFStatsType.FLOW);
-			log.info("collect collect flow");
-			log.info("datapathid size {}",replies.entrySet().size());
+//			log.info("=================collect flow==================");
+//			log.info("datapathid size {}",replies.entrySet().size());
 			for (Entry<DatapathId, List<OFStatsReply>> e : replies.entrySet()) {
-				log.info("datapathid {} reply size {}", e.getValue(), e.getValue().size());
 				if(switchFlowStatisticsHashMap.containsKey(e.getKey())) {
-					//log.info("contain");
 					switchFlowStatisticsHashMap.get(e.getKey()).updateStasticsByReplies(e.getValue());
 				}
 				else {
-				//	log.info("no contain");
 					OFSwitchFlowStatistics statistics = new OFSwitchFlowStatistics();
-					//log.info("update ");
 					statistics.updateStasticsByReplies(e.getValue());
-				//	log.info("update over");
 					switchFlowStatisticsHashMap.put(e.getKey(), statistics);
-				//	log.info("put over");
 				}
 			}
 		}

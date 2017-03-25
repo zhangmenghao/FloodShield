@@ -126,6 +126,9 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     private static final short DECISION_BITS = 24;
     private static final short DECISION_SHIFT = 0;
     private static final long DECISION_MASK = ((1L << DECISION_BITS) - 1) << DECISION_SHIFT;
+    
+    private static final int TOTAL_THROUGHPUT = 1000;
+    private static final int FLOW_TABLE_NUM = 1000;
 
     private static final short FLOWSET_BITS = 28;
     protected static final short FLOWSET_SHIFT = DECISION_BITS;
@@ -136,7 +139,9 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     private DHCPPacketProcessor dhcpPacketProcessor;
     private PacketInMonitor packetInMonitor;
     
+    public static HashMap<DatapathId, DatapathCollector> datapathMap;
     public static HashMap<IPv4Address, PacketInCollector> hostPacketInMap;
+    public static PacketInCollector totalPacketIn;
 
     protected static class FlowSetIdRegistry {
         private volatile Map<NodePortTuple, Set<U64>> nptToFlowSetIds;
@@ -260,26 +265,56 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         if (eth.getEtherType() == EthType.IPv4) {
         	IPv4 ip = (IPv4) eth.getPayload();
         	IPv4Address srcIp = ip.getSourceAddress();
+        	DatapathId datapathId = sw.getId();
+        	boolean policyTrigger = false;
+        	IPv4Address targetIP = null;
+        	// policy 1
         	if (hostPacketInMap.containsKey(srcIp)) {
         		hostPacketInMap.get(srcIp).updateRate(System.currentTimeMillis());
         		if (!hostPacketInMap.get(srcIp).allowForward()) {
-        			// add drop flow-table to sw
-        			log.info("command stop sw=" + sw.getId().toString() + " ip=" + srcIp.toString());
-        		    List<OFAction> actions = new ArrayList<OFAction>();
-        	    	Match.Builder mb = sw.getOFFactory().buildMatch();
-        	    	mb.setExact(MatchField.ETH_TYPE, EthType.IPv4);
-        	    	mb.setExact(MatchField.IPV4_SRC, srcIp);
-        			OFFlowAdd defaultFlow = sw.getOFFactory().buildFlowAdd()
-        			.setMatch(mb.build())
-        			.setTableId(TableId.of(0))
-        			.setPriority(4)
-        			.setHardTimeout(5)
-        			.setIdleTimeout(5)
-        			.setActions(actions)
-        			.build();
-        			sw.write(defaultFlow);
-        			return Command.STOP;
+        			log.info("policy 1 triggered");
+        			policyTrigger = true;
+        			targetIP = srcIp;
         		}
+        	}
+        	// policy 2
+        	totalPacketIn.updateNumber();
+        	if (totalPacketIn.getNumber() > TOTAL_THROUGHPUT*0.95) {
+        		policyTrigger = true;
+        		int maxNumber = -1;
+        		for (PacketInCollector collector : hostPacketInMap.values()) {
+        			if (collector.getNumber() > maxNumber) {
+        				log.info("policy 2 triggered");
+        				policyTrigger = true;
+        				maxNumber = collector.getNumber();
+        				targetIP = collector.getIP();
+        			}
+        		}
+        	}
+        	// policy 3
+        	if (datapathMap.get(datapathId).getNum() > FLOW_TABLE_NUM*0.95) {
+        		log.info("policy 3 triggered");
+        		policyTrigger = true;
+        		targetIP = datapathMap.get(datapathId).getMaxNumberIP();
+        	}
+        	// if triggered, add drop flow table into sw
+        	if (policyTrigger) {
+            	log.info("command stop sw=" + sw.getId().toString() + " ip=" + srcIp.toString());
+    			// add drop flow-table to sw
+    		    List<OFAction> actions = new ArrayList<OFAction>();
+    	    	Match.Builder mb = sw.getOFFactory().buildMatch();
+    	    	mb.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+    	    	mb.setExact(MatchField.IPV4_SRC, targetIP);
+    			OFFlowAdd defaultFlow = sw.getOFFactory().buildFlowAdd()
+    			.setMatch(mb.build())
+    			.setTableId(TableId.of(0))
+    			.setPriority(4)
+    			.setHardTimeout(5)
+    			.setIdleTimeout(5)
+    			.setActions(actions)
+    			.build();
+    			sw.write(defaultFlow);
+    			return Command.STOP;
         	}
         }
         if (decision != null) {
@@ -796,6 +831,8 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         this.packetInMonitor.registerPacketInMonitor(this.switchService);
         
         this.hostPacketInMap = new HashMap<IPv4Address, PacketInCollector>();
+        this.totalPacketIn = new PacketInCollector();
+        this.datapathMap = new HashMap<DatapathId, DatapathCollector>();
 
         Map<String, String> configParameters = context.getConfigParams(this);
         String tmp = configParameters.get("hard-timeout");

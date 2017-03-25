@@ -83,22 +83,21 @@ public class OFSwitchFlowStatistics {
     }
 
     private void updateStastics(OFFlowStatsReply fsr) {
-            this.all_flow_nmb += fsr.getEntries().size();
-           // log.info("{}",fsr.getEntries().size());
-            for (OFFlowStatsEntry pse : fsr.getEntries()) {
-                long packetCount = pse.getPacketCount().getValue();
-                String id = pse.getMatch().toString();
-                if (pse.getHardTimeout() == 0 && pse.getIdleTimeout() == 0) {
-                    this.hard_flow_nmb++;
-                    continue;
-                }
-                if (packetCount > FLOW_MATCH_HIGH_THRESHOLD) {
-                    this.high_used_flow_nmb++;
-                }
-                if (packetCount < FLOW_MATCH_HIGH_THRESHOLD) {
-                    this.low_used_flow_nmb++;
-                }
+    	this.all_flow_nmb += fsr.getEntries().size();
+        for (OFFlowStatsEntry pse : fsr.getEntries()) {
+            long packetCount = pse.getPacketCount().getValue();
+            String id = pse.getMatch().toString();
+            if (pse.getHardTimeout() == 0 && pse.getIdleTimeout() == 0) {
+                this.hard_flow_nmb++;
+                continue;
             }
+            if (packetCount > FLOW_MATCH_HIGH_THRESHOLD) {
+                this.high_used_flow_nmb++;
+            }
+            if (packetCount < FLOW_MATCH_HIGH_THRESHOLD) {
+                this.low_used_flow_nmb++;
+            }
+        }
     }
 
     public void updateStasticsByReplies(List<OFStatsReply> replies) {
@@ -108,7 +107,6 @@ public class OFSwitchFlowStatistics {
             this.low_used_flow_nmb =  0;
             this.hard_flow_nmb = 0;
             this.high_used_flow_nmb = 0;
-           // log.info("reply size{}", replies.size());
             for (OFStatsReply r : replies) {
                 OFFlowStatsReply fsr = (OFFlowStatsReply) r;
                 updateStastics(fsr);

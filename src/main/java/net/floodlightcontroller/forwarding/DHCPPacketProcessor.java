@@ -157,8 +157,16 @@ public class DHCPPacketProcessor {
             OFPort outPort = switchPortList.get(indx).getPortId();
 
             // add new ip into Forwarding.host-pi-map
+            IPv4Address iip = dhcpPayload.getYourIPAddress();
             if (!Forwarding.hostPacketInMap.containsKey(dhcpPayload.getYourIPAddress()))
-            	Forwarding.hostPacketInMap.put(dhcpPayload.getYourIPAddress(), new PacketInCollector(dhcpPayload.getYourIPAddress()));
+            	Forwarding.hostPacketInMap.put(iip, new PacketInCollector(dhcpPayload.getYourIPAddress()));
+            // add new ip into each collector of sw-collector map
+            for (DatapathId iid : Forwarding.datapathMap.keySet()) {
+            	if (!Forwarding.datapathMap.get(iid).map.containsKey(iip)) {
+            		PacketInCollector collector = new PacketInCollector(iip);
+            		Forwarding.datapathMap.get(iid).map.put(iip, collector);
+            	}
+            }
             
             this.pushDHCPReplyToClient(sw_o,pi,outPort,cntx);
             log.info("push packet to " + sw_o.getId() + " oport: " + outPort.toString()
