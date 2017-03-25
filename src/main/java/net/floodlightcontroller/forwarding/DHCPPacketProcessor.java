@@ -210,6 +210,8 @@ public class DHCPPacketProcessor {
 	    .setTableId(TableId.of(0))
 	    .setPriority(2)
 	    .setInstructions(instructions)
+	    .setHardTimeout(0)
+	    .setIdleTimeout(0)
 	    .build();
 	  
 	    OFFlowAdd defaultFlow2 = sw.getOFFactory().buildFlowAdd()
@@ -217,6 +219,8 @@ public class DHCPPacketProcessor {
 	    .setTableId(TableId.of(0))
 	    .setPriority(2)
 	    .setInstructions(instructions)
+	    .setHardTimeout(0)
+	    .setIdleTimeout(0)
 	    .build();
 	    
 	    sw.write(defaultFlow1);
@@ -236,6 +240,8 @@ public class DHCPPacketProcessor {
 		.setTableId(TableId.of(0))
 		.setPriority(1)
 		.setActions(actions)
+		.setHardTimeout(0)
+		.setIdleTimeout(0)
 		.build();
 			  
 		OFFlowAdd defaultFlow4 = sw.getOFFactory().buildFlowAdd()
@@ -243,42 +249,11 @@ public class DHCPPacketProcessor {
 		.setTableId(TableId.of(0))
 		.setPriority(1)
 		.setActions(actions)
+		.setHardTimeout(0)
+		.setIdleTimeout(0)
 		.build();
 		
 		sw.write(defaultFlow3);
 		sw.write(defaultFlow4);
-    	
-    	// old version
-//        Match.Builder mb = sw.getOFFactory().buildMatch();
-//        mb.setExact(MatchField.ETH_TYPE, EthType.IPv4);
-//        mb.setExact(MatchField.IPV4_SRC, ip);
-//        mb.setExact(MatchField.ETH_SRC, mac);
-//
-//        Match.Builder mb2 = sw.getOFFactory().buildMatch();
-//        mb2.setExact(MatchField.ETH_TYPE, EthType.ARP);
-//        // mb2.setExact(MatchField.ETH_SRC, mac);
-//
-//        List<OFAction> actions = new ArrayList<OFAction>();
-//        OFActionOutput.Builder aob = sw.getOFFactory().actions().buildOutput();
-//        aob.setPort(OFPort.CONTROLLER);
-//        aob.setMaxLen(Integer.MAX_VALUE);
-//        actions.add(aob.build());
-//
-//        OFFlowAdd defaultFlow3 = sw.getOFFactory().buildFlowAdd()
-//                .setMatch(mb.build())
-//                .setTableId(TableId.of(0))
-//                .setPriority(1)
-//                .setActions(actions)
-//                .build();
-//
-//        OFFlowAdd defaultFlow2 = sw.getOFFactory().buildFlowAdd()
-//                .setMatch(mb2.build())
-//                .setTableId(TableId.of(0))
-//                .setPriority(1)
-//                .setActions(actions)
-//                .build();
-//
-//        sw.write(defaultFlow3);
-//        sw.write(defaultFlow2);
     }
 }

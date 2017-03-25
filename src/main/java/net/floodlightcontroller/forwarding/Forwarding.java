@@ -66,6 +66,7 @@ import net.floodlightcontroller.util.OFPortMode;
 import net.floodlightcontroller.util.OFPortModeTuple;
 import net.floodlightcontroller.util.ParseUtils;
 
+import org.projectfloodlight.openflow.protocol.OFFlowAdd;
 import org.projectfloodlight.openflow.protocol.OFFlowMod;
 import org.projectfloodlight.openflow.protocol.OFFlowModCommand;
 import org.projectfloodlight.openflow.protocol.OFFlowRemoved;
@@ -256,20 +257,29 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     @Override
     public Command processPacketInMessage(IOFSwitch sw, OFPacketIn pi, IRoutingDecision decision, FloodlightContext cntx) {
         Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
-        // We found a routing decision (i.e. Firewall is enabled... it's the only thing that makes RoutingDecisions)
-//        if (eth.getEtherType() == EthType.IPv4 && !SPEED_MONITOR) {
-//            OFPort srcPort = OFMessageUtils.getInPort(pi);
-//            DatapathId srcSw = sw.getId();
-//            IPv4 ip = (IPv4) eth.getPayload();
-//            IPv4Address srcIp = ip.getSourceAddress();
-//            this.packetInMonitor.doMonitor(sw,srcPort,srcSw,srcIp,ip,decision);
-//        }
         if (eth.getEtherType() == EthType.IPv4) {
         	IPv4 ip = (IPv4) eth.getPayload();
         	IPv4Address srcIp = ip.getSourceAddress();
         	if (hostPacketInMap.containsKey(srcIp)) {
         		hostPacketInMap.get(srcIp).updateRate(System.currentTimeMillis());
-        		if (!hostPacketInMap.get(srcIp).allowForward()) return Command.STOP;
+        		if (!hostPacketInMap.get(srcIp).allowForward()) {
+        			// add drop flow-table to sw
+        			log.info("command stop sw=" + sw.getId().toString() + " ip=" + srcIp.toString());
+        		    List<OFAction> actions = new ArrayList<OFAction>();
+        	    	Match.Builder mb = sw.getOFFactory().buildMatch();
+        	    	mb.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+        	    	mb.setExact(MatchField.IPV4_SRC, srcIp);
+        			OFFlowAdd defaultFlow = sw.getOFFactory().buildFlowAdd()
+        			.setMatch(mb.build())
+        			.setTableId(TableId.of(0))
+        			.setPriority(4)
+        			.setHardTimeout(5)
+        			.setIdleTimeout(5)
+        			.setActions(actions)
+        			.build();
+        			sw.write(defaultFlow);
+        			return Command.STOP;
+        		}
         	}
         }
         if (decision != null) {
@@ -545,7 +555,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 
             pushRoute(path, m, pi, sw.getId(), cookie, 
                     cntx, requestFlowRemovedNotifn,
-                    OFFlowModCommand.ADD);	
+                    OFFlowModCommand.ADD);
             
             /* 
              * Register this flowset with ingress and egress ports for link down
