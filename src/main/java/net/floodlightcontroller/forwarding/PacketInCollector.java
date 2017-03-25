@@ -106,10 +106,10 @@ public class PacketInCollector {
         	}
     		numList.add(tempNum);
     		if (numList.size() > 5) {
-    			if (collectorType == SINGLE_TYPE)
-    				log.info("udpate ip = " + ip.toString() + " number = " + number + " rate = " + rate);
-    			else if (collectorType == TOTAL_TYPE)
-    				log.info("update total number = " + number);
+//    			if (collectorType == SINGLE_TYPE)
+//    				log.info("udpate ip = " + ip.toString() + " number = " + number + " rate = " + rate);
+//    			else if (collectorType == TOTAL_TYPE)
+//    				log.info("update total number = " + number);
     			number = numList.get(numList.size()-1) - numList.get(numList.size()-6);
         		while (numList.size() > 6) numList.remove(0);
     		}

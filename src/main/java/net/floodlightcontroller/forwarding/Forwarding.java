@@ -292,7 +292,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         		}
         	}
         	// policy 3
-        	if (datapathMap.get(datapathId).getNum() > FLOW_TABLE_NUM*0.95) {
+        	if (datapathMap.containsKey(datapathId) && datapathMap.get(datapathId).getNum() > FLOW_TABLE_NUM*0.95) {
         		log.info("policy 3 triggered");
         		policyTrigger = true;
         		targetIP = datapathMap.get(datapathId).getMaxNumberIP();
