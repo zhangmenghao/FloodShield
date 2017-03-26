@@ -276,6 +276,9 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         			policyTrigger = true;
         			targetIP = srcIp;
         		}
+        	} else {
+        		hostPacketInMap.put(srcIp, new PacketInCollector());
+        		hostPacketInMap.get(srcIp).updateRate(System.currentTimeMillis());
         	}
         	// policy 2
         	totalPacketIn.updateNumber();

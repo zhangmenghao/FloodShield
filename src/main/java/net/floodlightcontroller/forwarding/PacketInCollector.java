@@ -69,7 +69,7 @@ public class PacketInCollector {
 			return false;
 		}
 		if (numList.size() > 6) {
-			if (number > 40) {
+			if (number > 50) {
 				return false;
 			}
 		}
