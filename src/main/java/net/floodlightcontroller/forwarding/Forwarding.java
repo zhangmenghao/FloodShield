@@ -270,7 +270,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         	IPv4Address targetIP = null;
         	// policy 1
         	if (hostPacketInMap.containsKey(srcIp)) {
-        		hostPacketInMap.get(srcIp).updateRate(System.currentTimeMillis());
+        		hostPacketInMap.get(srcIp).updateRate();
         		if (!hostPacketInMap.get(srcIp).allowForward()) {
         			log.info("policy 1 triggered");
         			policyTrigger = true;
@@ -278,11 +278,11 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         		}
         	} else {
         		hostPacketInMap.put(srcIp, new PacketInCollector());
-        		hostPacketInMap.get(srcIp).updateRate(System.currentTimeMillis());
+        		hostPacketInMap.get(srcIp).updateRate();
         	}
         	// policy 2
-        	totalPacketIn.updateNumber();
-        	if (totalPacketIn.getNumber() > TOTAL_THROUGHPUT*0.95) {
+        	totalPacketIn.updateRate();
+        	if (totalPacketIn.allowForward()) {
         		policyTrigger = true;
         		int maxNumber = -1;
         		for (PacketInCollector collector : hostPacketInMap.values()) {

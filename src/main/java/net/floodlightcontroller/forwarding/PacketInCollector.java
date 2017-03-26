@@ -65,13 +65,11 @@ public class PacketInCollector {
 	}
 	
 	public boolean allowForward() {
-		if (rate < 1000 && rate > 0)  {
+		if (collectorType == SINGLE_TYPE && rate < 500 && rate > 0)  {
 			return false;
 		}
-		if (numList.size() > 6) {
-			if (number > 50) {
-				return false;
-			}
+		if (collectorType == TOTAL_TYPE && rate < 1000 && rate > 0)  {
+			return false;
 		}
 		return true;
 	}
@@ -79,16 +77,25 @@ public class PacketInCollector {
 	public synchronized void updateNumber() {
 		this.tempNum += 1;
 	}
-	public synchronized void updateRate(long ts) {
-		if (rate == -1) {
+	public synchronized void updateRate() {
+		long ts = System.currentTimeMillis();
+		if (rateNumber == 0) {
 			rateLastTimeStamp = ts;
 		}
 		this.rateNumber += 1;
 		this.tempNum += 1;
-		if (rateNumber == 10) {
-			rate = ts - rateLastTimeStamp;
-			rateLastTimeStamp = ts;
-			rateNumber = 0;
+		if (collectorType == SINGLE_TYPE) {
+			if (rateNumber == 100) {
+				rate = ts - rateLastTimeStamp;
+				rateLastTimeStamp = ts;
+				rateNumber = 0;
+			}
+		} else if (collectorType == TOTAL_TYPE) {
+			if (rateNumber == 400000) {
+				rate = ts - rateLastTimeStamp;
+				rateLastTimeStamp = ts;
+				rateNumber = 0;
+			}
 		}
 	}
 	public synchronized void resetRate() {
