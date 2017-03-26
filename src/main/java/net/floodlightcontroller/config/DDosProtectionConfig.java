@@ -41,6 +41,9 @@ public class DDosProtectionConfig implements IOFMessageListener, IFloodlightModu
     protected IRestApiService restApiService;
     protected static Logger logger;
     private String configPath = "xmltest";
+    private static boolean openStaticIPConfig = false;
+    public static SupervisedConfig supervisedConfig;
+    public static DynamicConfig dynamicConfig;
     @Override
     public boolean isCallbackOrderingPrereq(OFType type, String name) {
         return false;
@@ -51,22 +54,56 @@ public class DDosProtectionConfig implements IOFMessageListener, IFloodlightModu
         return false;
     }
 
+    public static void setOpenStaticIPConfig(String open) {
+        if(open.equals("ON")) {
+            openStaticIPConfig = true;
+        }
+        else openStaticIPConfig = false;
 
-    public static void parseXmlData(String xmlFilePath){
-        Document doc = parseXML2Document(xmlFilePath);
-        Element root  = doc.getRootElement();
-        Element staticElement = root.element("StaticConfig");
+    }
 
+    public static void parseSupervisedConfig(Element root) {
+        Element supervisedElement = root.element("SupervisedConfig");
+        String methodPrefix = "set";
+        try {
+            Class<?> c = SupervisedConfig.class;
+            Iterator root_action = supervisedElement.attributeIterator();
+            Attribute root_attribute = (Attribute) root_action.next();
+            String openMethodName = methodPrefix + root_attribute.getName();
+            Method openMethod = c.getMethod(openMethodName, String.class);
+            openMethod.invoke(supervisedConfig, root_attribute.getStringValue());
+            for (Iterator i_action = supervisedElement.elementIterator(); i_action.hasNext(); ) {
+                Element e_action = (Element) i_action.next();
+                Iterator a_action = e_action.attributeIterator();
+                Attribute attribute = (Attribute) a_action.next();
+                String methodName = methodPrefix + attribute.getValue();
+                Method method = c.getMethod(methodName, String.class);
+                method.invoke(supervisedConfig, e_action.getStringValue());
+            }
+        }catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public static void parseStaticIPConfig(Element root) {
+        Element staticElement = root.element("StaticIPConfig");
+        String methodPrefix = "set";
+        try {
+            Class<?> c = DDosProtectionConfig.class;
+            Iterator root_action = staticElement.attributeIterator();
+            Attribute root_attribute = (Attribute) root_action.next();
+            String openMethodName = methodPrefix + root_attribute.getName();
+            Method openMethod = c.getMethod(openMethodName, String.class);
+            openMethod.invoke(c.newInstance(), root_attribute.getStringValue());
+        }catch (Exception ex) {
+            ex.printStackTrace();
+        }
         for(Iterator i_action = staticElement.elementIterator(); i_action.hasNext();){
             Element e_action = (Element)i_action.next();
-
             try {
                 Class<?> c = StaticConfigItem.class;
                 StaticConfigItem o = (StaticConfigItem) c.newInstance();
-                String methodPrefix = "set";
-
                 for (Iterator a_action = e_action.attributeIterator(); a_action.hasNext(); ) {
-
                     Attribute attribute = (Attribute) a_action.next();
                     String methodName = methodPrefix + attribute.getName();
                     Method method = c.getMethod(methodName,String.class);
@@ -78,6 +115,37 @@ public class DDosProtectionConfig implements IOFMessageListener, IFloodlightModu
                 ex.printStackTrace();
             }
         }
+    }
+
+    public static void parseDynamicIPConfig(Element root) {
+        Element dynamicElement = root.element("DynamicIPConfig");
+        String methodPrefix = "set";
+        try {
+            Class<?> c = SupervisedConfig.class;
+            Iterator root_action = dynamicElement.attributeIterator();
+            Attribute root_attribute = (Attribute) root_action.next();
+            String openMethodName = methodPrefix + root_attribute.getName();
+            Method openMethod = c.getMethod(openMethodName, String.class);
+            openMethod.invoke(dynamicConfig, root_attribute.getStringValue());
+            for (Iterator i_action = dynamicElement.elementIterator(); i_action.hasNext(); ) {
+                Element e_action = (Element) i_action.next();
+                Iterator a_action = e_action.attributeIterator();
+                Attribute attribute = (Attribute) a_action.next();
+                String methodName = methodPrefix + attribute.getValue();
+                Method method = c.getMethod(methodName, String.class);
+                method.invoke(dynamicConfig, e_action.getStringValue());
+            }
+        }catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+
+    public static void parseXmlData(String xmlFilePath){
+        Document doc = parseXML2Document(xmlFilePath);
+        Element root  = doc.getRootElement();
+        parseSupervisedConfig(root);
+        parseStaticIPConfig(root);
     }
     public static Document parseXML2Document(String xmlFilePath) {
         try {
@@ -97,7 +165,6 @@ public class DDosProtectionConfig implements IOFMessageListener, IFloodlightModu
         }
     }
     public static void print() {
-
         for(StaticConfigItem config : staticConfigs) {
             config.print();
         }
@@ -193,6 +260,8 @@ public class DDosProtectionConfig implements IOFMessageListener, IFloodlightModu
         logger.info("init");
         // StaticConfig Test
         logger.info("fetch config data");
+        supervisedConfig = new SupervisedConfig();
+        dynamicConfig = new DynamicConfig();
         DDosProtectionConfig.parseXmlData(configPath);
         logger.info("fetch ok size: {}",DDosProtectionConfig.staticConfigs.size());
     }
@@ -243,6 +312,40 @@ public class DDosProtectionConfig implements IOFMessageListener, IFloodlightModu
         public StaticConfigItem() {
             super();
         }
+    }
+
+    public class SupervisedConfig{
+        boolean open = false;
+        float maxPiRateThreshold = 1.0f;
+        float maxFlowEntryThreshold = 1.0f;
+        String defencePolicy;
+        public void setOpenSupervised(String opSupervised) {
+            if(opSupervised.equals("ON")) open = true;
+            else open = false;
+        }
+        public void setMaxPiRateThreshold(String piRateThreshold) {
+            this.maxPiRateThreshold = Float.valueOf(piRateThreshold).floatValue();
+        }
+        public void setMaxFlowEntryThreshold(String flowEntryThreshold) {
+            this.maxFlowEntryThreshold = Float.valueOf(flowEntryThreshold).floatValue();
+        }
+        public void setDefencePolicy(String defencePolicy) {
+            this.defencePolicy = defencePolicy;
+        }
+        public String getDefencePolicy() {
+            return this.defencePolicy;
+        }
+        public float getMaxPiRateThreshold() {
+            return this.maxPiRateThreshold;
+
+        }
+        public float getMaxFlowEntryThreshold() {
+            return this.getMaxFlowEntryThreshold();
+        }
+    }
+
+    public class DynamicConfig{
+
     }
 }
 

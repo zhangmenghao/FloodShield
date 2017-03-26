@@ -1,11 +1,23 @@
 <all>
-<StaticConfig>
+
+<StaticIPConfig OpenStaticIPConfig="OFF">
     <item SWID="00:00:00:00:00:01" MAC="00:00:00:00:00:01" IP="192.168.100.1"> </item>
     <item SWID="00:00:00:00:00:02" MAC="00:00:00:00:00:03" IP="192.168.100.1"> </item>
     <item SWID="00:00:00:00:00:03" MAC="00:00:00:00:00:02" IP="192.168.100.1"> </item>
     <item SWID="00:00:00:00:00:05" MAC="00:00:00:00:00:02" IP="192.168.100.1"> </item>
-</StaticConfig>
-<packetIn>
-    <threshold>100</threshold>
-</packetIn>
+</StaticIPConfig>
+
+<DynamicIPConfig>
+    <DHCP OpenDHCPConfig="On">
+        <Server IP="10.0.0.1" MAC="00:00:00:00:00:01"></Server>
+    </DHCP>
+</DynamicIPConfig>
+
+<SupervisedConfig OpenSupervised="On">
+    <item name="MaxFlowEntryThreshold">0.95</item>
+    <item name="MaxPiRateThreshold">0.95</item>
+    <item name="DefencePolicy">drop</item>
+</SupervisedConfig>
+
+
 </all>
