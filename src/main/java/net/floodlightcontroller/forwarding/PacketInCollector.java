@@ -17,6 +17,8 @@ import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.routing.IRoutingDecision;
 
 public class PacketInCollector {
+	private static int TOTAL_TYPE = 0;
+	private static int SINGLE_TYPE = 1;
 	protected static final Logger log = LoggerFactory.getLogger(PacketInCollector.class);
 	private int rateNumber;
 	private long rate;
@@ -25,8 +27,16 @@ public class PacketInCollector {
 	private int tempNum;
 	private int number;
 	private IPv4Address ip;
+	private int collectorType;
 	
 	ScheduledExecutorService service;
+	
+	public int getNumber() {
+		return number;
+	}
+	public IPv4Address getIP() {
+		return ip;
+	}
 	
 	public PacketInCollector() {
 		this.rateNumber = 0;
@@ -35,9 +45,10 @@ public class PacketInCollector {
 		numList = new LinkedList<Integer>();
 		this.tempNum = 0;
 		this.number = 0;
+		this.collectorType = TOTAL_TYPE;
 		
 		service = Executors.newSingleThreadScheduledExecutor();
-		service.scheduleAtFixedRate(runnable, 0, 5, TimeUnit.SECONDS);
+		service.scheduleAtFixedRate(runnable, 0, 1, TimeUnit.SECONDS);
 	}
 	public PacketInCollector(IPv4Address ip) {
 		this.ip = ip;
@@ -47,6 +58,7 @@ public class PacketInCollector {
 		numList = new LinkedList<Integer>();
 		this.tempNum = 0;
 		this.number = 0;
+		this.collectorType = SINGLE_TYPE;
 		
 		service = Executors.newSingleThreadScheduledExecutor();
 		service.scheduleAtFixedRate(runnable, 0, 1, TimeUnit.SECONDS);
@@ -64,6 +76,9 @@ public class PacketInCollector {
 		return true;
 	}
 	
+	public synchronized void updateNumber() {
+		this.tempNum += 1;
+	}
 	public synchronized void updateRate(long ts) {
 		if (rate == -1) {
 			rateLastTimeStamp = ts;
@@ -82,14 +97,19 @@ public class PacketInCollector {
 	}
 	
 	Runnable runnable = new Runnable() {
-        @Override
+		@Override
         public void run() {
+        	if (collectorType == SINGLE_TYPE) {
+        		if (System.currentTimeMillis() - rateLastTimeStamp > 1000) {
+        			resetRate();
+        		}
+        	}
     		numList.add(tempNum);
-    		if (System.currentTimeMillis() - rateLastTimeStamp > 1000) {
-    			resetRate();
-    		}
     		if (numList.size() > 5) {
-            	log.info("udpate ip = " + ip.toString() + " number = " + number + " rate = " + rate);
+//    			if (collectorType == SINGLE_TYPE)
+//    				log.info("udpate ip = " + ip.toString() + " number = " + number + " rate = " + rate);
+//    			else if (collectorType == TOTAL_TYPE)
+//    				log.info("update total number = " + number);
     			number = numList.get(numList.size()-1) - numList.get(numList.size()-6);
         		while (numList.size() > 6) numList.remove(0);
     		}
