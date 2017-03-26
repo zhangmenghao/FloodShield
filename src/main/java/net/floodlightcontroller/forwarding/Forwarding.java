@@ -283,7 +283,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 //        	}
         	// policy 2
         	totalPacketIn.updateRate();
-        	if (totalPacketIn.allowForward()) {
+        	if (!totalPacketIn.allowForward()) {
         		policyTrigger = true;
         		int maxNumber = -1;
         		for (PacketInCollector collector : hostPacketInMap.values()) {
