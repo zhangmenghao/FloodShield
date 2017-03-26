@@ -378,7 +378,7 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 						.setMatch(match)
 						.setOutPort(OFPort.ANY)
 						.setTableId(TableId.ALL)
-						.setOutGroup(OFGroup.ANY)
+//						.setOutGroup(OFGroup.ANY)
 						.build();
 				break;
 			case AGGREGATE:
