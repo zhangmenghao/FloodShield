@@ -117,7 +117,7 @@ public class PacketInCollector {
 //    				log.info("udpate ip = " + ip.toString() + " number = " + number + " rate = " + rate);
 //    			else if (collectorType == TOTAL_TYPE)
 //    				log.info("update total number = " + number);
-    			number = numList.get(numList.size()-1) - numList.get(numList.size()-6);
+    			number = numList.get(numList.size()-1) - numList.get(numList.size()-2);
         		while (numList.size() > 6) numList.remove(0);
     		}
         }

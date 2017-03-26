@@ -276,10 +276,11 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         			policyTrigger = true;
         			targetIP = srcIp;
         		}
-        	} else {
-        		hostPacketInMap.put(srcIp, new PacketInCollector());
-        		hostPacketInMap.get(srcIp).updateRate();
         	}
+//        	else {
+//        		hostPacketInMap.put(srcIp, new PacketInCollector());
+//        		hostPacketInMap.get(srcIp).updateRate();
+//        	}
         	// policy 2
         	totalPacketIn.updateRate();
         	if (totalPacketIn.allowForward()) {
