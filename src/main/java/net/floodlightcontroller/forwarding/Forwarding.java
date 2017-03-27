@@ -271,6 +271,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         	// policy 1
         	if (hostPacketInMap.containsKey(srcIp)) {
         		hostPacketInMap.get(srcIp).updateRate();
+//        		log.info("rate = " + hostPacketInMap.get(srcIp).rate + " number = " + hostPacketInMap.get(srcIp).rateNumber);
         		if (!hostPacketInMap.get(srcIp).allowForward()) {
         			log.info("policy 1 triggered");
         			policyTrigger = true;

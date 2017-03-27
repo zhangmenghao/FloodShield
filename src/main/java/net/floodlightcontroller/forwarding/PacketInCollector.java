@@ -20,8 +20,8 @@ public class PacketInCollector {
 	private static int TOTAL_TYPE = 0;
 	private static int SINGLE_TYPE = 1;
 	protected static final Logger log = LoggerFactory.getLogger(PacketInCollector.class);
-	private int rateNumber;
-	private long rate;
+	public int rateNumber;
+	public long rate;
 	private long rateLastTimeStamp;
 	private LinkedList<Integer> numList;
 	private int tempNum;
@@ -85,7 +85,7 @@ public class PacketInCollector {
 		this.rateNumber += 1;
 		this.tempNum += 1;
 		if (collectorType == SINGLE_TYPE) {
-			if (rateNumber == 100) {
+			if (rateNumber == 500) {
 				rate = ts - rateLastTimeStamp;
 				rateLastTimeStamp = ts;
 				rateNumber = 0;
