@@ -121,7 +121,7 @@ public class DDosProtectionConfig implements IOFMessageListener, IFloodlightModu
         Element dynamicElement = root.element("DynamicIPConfig");
         String methodPrefix = "set";
         try {
-            Class<?> c = SupervisedConfig.class;
+            Class<?> c = DynamicConfig.class;
             Iterator root_action = dynamicElement.attributeIterator();
             Attribute root_attribute = (Attribute) root_action.next();
             String openMethodName = methodPrefix + root_attribute.getName();
@@ -146,6 +146,7 @@ public class DDosProtectionConfig implements IOFMessageListener, IFloodlightModu
         Element root  = doc.getRootElement();
         parseSupervisedConfig(root);
         parseStaticIPConfig(root);
+        parseDynamicIPConfig(root);
     }
     public static Document parseXML2Document(String xmlFilePath) {
         try {
@@ -316,36 +317,118 @@ public class DDosProtectionConfig implements IOFMessageListener, IFloodlightModu
 
     public class SupervisedConfig{
         boolean open = false;
-        float maxPiRateThreshold = 1.0f;
+        float maxTotalPiRateThreshold = 1.0f;
         float maxFlowEntryThreshold = 1.0f;
+        float maxSinglePiRateThreshold = 1.0f;
         String defencePolicy;
+        boolean checkValid(String info) {
+            if(info.equals("") || info.equals(" ") || info.length() < 2) return false;
+            return true;
+        }
         public void setOpenSupervised(String opSupervised) {
+            if(!checkValid(opSupervised))return;
             if(opSupervised.equals("ON")) open = true;
             else open = false;
         }
-        public void setMaxPiRateThreshold(String piRateThreshold) {
-            this.maxPiRateThreshold = Float.valueOf(piRateThreshold).floatValue();
+        public void setMaxTotalPiRateThreshold(String piRateThreshold) {
+            if(!checkValid(piRateThreshold))return;
+            this.maxTotalPiRateThreshold = Float.valueOf(piRateThreshold).floatValue();
+        }
+        public void setMaxSinglePiRateThreshold(String piRateThreshold) {
+            if(!checkValid(piRateThreshold))return;
+            this.maxSinglePiRateThreshold = Float.valueOf(piRateThreshold).floatValue();
         }
         public void setMaxFlowEntryThreshold(String flowEntryThreshold) {
+            if(!checkValid(flowEntryThreshold))return;
             this.maxFlowEntryThreshold = Float.valueOf(flowEntryThreshold).floatValue();
         }
         public void setDefencePolicy(String defencePolicy) {
+            if(!checkValid(defencePolicy))return;
             this.defencePolicy = defencePolicy;
         }
         public String getDefencePolicy() {
             return this.defencePolicy;
         }
-        public float getMaxPiRateThreshold() {
-            return this.maxPiRateThreshold;
+        public float getMaxTotalPiRateThreshold() {
+            return this.maxTotalPiRateThreshold;
+
+        }
+        public float getMaxSinglePiRateThreshold() {
+            return this.maxSinglePiRateThreshold;
 
         }
         public float getMaxFlowEntryThreshold() {
             return this.getMaxFlowEntryThreshold();
         }
+        public String getState() {
+            String state = "{" +
+                    "Open:" + open + "\n"+
+                    "maxTotalPiRateThreshold:"+maxTotalPiRateThreshold + "\n" +
+                    "maxSinglePiRateThreshold:" + maxSinglePiRateThreshold + "\n" +
+                    "maxFlowEntryThreshold:"+maxFlowEntryThreshold+"\n"+
+                    "defencePolicy:"+defencePolicy+"\n"
+            +"}\n";
+            return state;
+        }
     }
 
     public class DynamicConfig{
+        // only support dhcp temporarily
+        String dhcpServerIP;
+        String dhcpServerMAC;
+        String authenticationToken;
+        boolean beOpen = false;
+        boolean checkValid(String info) {
+            if(info.equals("") || info.equals(" ") || info.length() < 2) return false;
+            return true;
+        }
 
+        public void setOpenDHCPConfig(String open) {
+            if(!checkValid(open))return;
+            if(open.equals("ON")) beOpen = true;
+            else beOpen = false;
+        }
+
+        public void setDhcpServerIP(String dhcpServerIP) {
+            if(!checkValid(dhcpServerIP))return;
+            this.dhcpServerIP = dhcpServerIP;
+        }
+
+        public void setDhcpServerMAC(String dhcpServerMAC) {
+            if(!checkValid(dhcpServerMAC))return;
+            this.dhcpServerMAC = dhcpServerMAC;
+        }
+
+        public void setAuthenticationToken(String authenticationToken) {
+            if(!checkValid(authenticationToken))return;
+            this.authenticationToken = authenticationToken;
+        }
+
+        public String getDhcpServerIP() {
+            return this.dhcpServerIP;
+        }
+        public String getDhcpServerMAC() {
+            return this.dhcpServerMAC;
+        }
+        public String getAuthenticationToken() {
+            return this.authenticationToken;
+        }
+        public String getState() {
+            String state = "{\n" +
+                    "DHCPOpen:" + beOpen + "\n"+
+                    "dhcpServerIP:"+dhcpServerIP + "\n" +
+                    "dhcpServerMAC:" + dhcpServerMAC + "\n" +
+                    "authenticateToken:"+authenticationToken+"\n"+
+                    "}\n";
+            return state;
+        }
+    }
+
+    public static SupervisedConfig getSupervisedConfig() {
+        return supervisedConfig;
+    }
+    public static DynamicConfig getDynamicConfig() {
+        return dynamicConfig;
     }
 }
 
