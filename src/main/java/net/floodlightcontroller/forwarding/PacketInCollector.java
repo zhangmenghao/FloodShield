@@ -65,13 +65,13 @@ public class PacketInCollector {
 	}
 	
 	public boolean allowForward() {
-		if (collectorType == SINGLE_TYPE && rate < 100 && rate > 0)  {
+		if (collectorType == SINGLE_TYPE && rate < 200 && rate > 0)  {
 			return false;
 		}
 		if (collectorType == TOTAL_TYPE && rate < 1000 && rate > 0)  {
 			return false;
 		}
-		if (collectorType == SINGLE_TYPE && number > 600) {
+		if (collectorType == SINGLE_TYPE && number > 500) {
 			return false;
 		}
 		return true;
