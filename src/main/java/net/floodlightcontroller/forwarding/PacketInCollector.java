@@ -65,7 +65,7 @@ public class PacketInCollector {
 	}
 	
 	public boolean allowForward() {
-		if (collectorType == SINGLE_TYPE && rate < 500 && rate > 0)  {
+		if (collectorType == SINGLE_TYPE && rate < 1000 && rate > 0)  {
 			return false;
 		}
 		if (collectorType == TOTAL_TYPE && rate < 1000 && rate > 0)  {
@@ -85,7 +85,7 @@ public class PacketInCollector {
 		this.rateNumber += 1;
 		this.tempNum += 1;
 		if (collectorType == SINGLE_TYPE) {
-			if (rateNumber == 500) {
+			if (rateNumber == 1000) {
 				rate = ts - rateLastTimeStamp;
 				rateLastTimeStamp = ts;
 				rateNumber = 0;
