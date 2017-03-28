@@ -128,7 +128,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     private static final long DECISION_MASK = ((1L << DECISION_BITS) - 1) << DECISION_SHIFT;
     
     private static final int TOTAL_THROUGHPUT = 1000;
-    private static final int FLOW_TABLE_NUM = 1000;
+    private static final int FLOW_TABLE_NUM = 10000;
 
     private static final short FLOWSET_BITS = 28;
     protected static final short FLOWSET_SHIFT = DECISION_BITS;
@@ -271,7 +271,9 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         	// policy 1
         	if (hostPacketInMap.containsKey(srcIp)) {
         		hostPacketInMap.get(srcIp).updateRate();
-//        		log.info("rate = " + hostPacketInMap.get(srcIp).rate + " number = " + hostPacketInMap.get(srcIp).rateNumber);
+//        		log.info("rate = " + hostPacketInMap.get(srcIp).rate
+//        				+ " number = " + hostPacketInMap.get(srcIp).number
+//        				+ " ip = " + srcIp.toString());
         		if (!hostPacketInMap.get(srcIp).allowForward()) {
         			log.info("policy 1 triggered");
         			policyTrigger = true;

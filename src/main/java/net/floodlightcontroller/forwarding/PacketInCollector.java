@@ -25,7 +25,7 @@ public class PacketInCollector {
 	private long rateLastTimeStamp;
 	private LinkedList<Integer> numList;
 	private int tempNum;
-	private int number;
+	public int number;
 	private IPv4Address ip;
 	private int collectorType;
 	
@@ -65,10 +65,13 @@ public class PacketInCollector {
 	}
 	
 	public boolean allowForward() {
-		if (collectorType == SINGLE_TYPE && rate < 1000 && rate > 0)  {
+		if (collectorType == SINGLE_TYPE && rate < 100 && rate > 0)  {
 			return false;
 		}
 		if (collectorType == TOTAL_TYPE && rate < 1000 && rate > 0)  {
+			return false;
+		}
+		if (collectorType == SINGLE_TYPE && number > 600) {
 			return false;
 		}
 		return true;
@@ -85,7 +88,7 @@ public class PacketInCollector {
 		this.rateNumber += 1;
 		this.tempNum += 1;
 		if (collectorType == SINGLE_TYPE) {
-			if (rateNumber == 1000) {
+			if (rateNumber == 50) {
 				rate = ts - rateLastTimeStamp;
 				rateLastTimeStamp = ts;
 				rateNumber = 0;
@@ -113,11 +116,7 @@ public class PacketInCollector {
         	}
     		numList.add(tempNum);
     		if (numList.size() > 5) {
-//    			if (collectorType == SINGLE_TYPE)
-//    				log.info("udpate ip = " + ip.toString() + " number = " + number + " rate = " + rate);
-//    			else if (collectorType == TOTAL_TYPE)
-//    				log.info("update total number = " + number);
-    			number = numList.get(numList.size()-1) - numList.get(numList.size()-2);
+    			number = numList.get(numList.size()-1) - numList.get(numList.size()-6);
         		while (numList.size() > 6) numList.remove(0);
     		}
         }
