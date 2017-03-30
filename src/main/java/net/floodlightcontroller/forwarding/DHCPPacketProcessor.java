@@ -112,11 +112,16 @@ public class DHCPPacketProcessor {
     }
 
     public boolean isDHCPServerPacket(DHCP pi) {
+    	try{
         if(Arrays.equals(pi.getOption(DHCP.DHCPOptionCode.OptionCode_MessageType).getData(), DHCP_MSG_TYPE_ACK) ||
                 Arrays.equals(pi.getOption(DHCP.DHCPOptionCode.OptionCode_MessageType).getData(), DHCP_MSG_TYPE_OFFER) ) {
             return true;
         }
-        return false;
+    	}
+    	finally{
+    		return false;
+    	}
+//        return false;
     }
 
     public boolean doDHCPPacketProcess(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
