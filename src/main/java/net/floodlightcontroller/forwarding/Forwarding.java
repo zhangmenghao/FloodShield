@@ -239,7 +239,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     }//end this class
     @Override
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
-
+    	log.info("========receive packet");
         switch (msg.getType()) {
             case PACKET_IN:
                 IRoutingDecision decision = null;
@@ -320,6 +320,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     			.setIdleTimeout(5)
     			.setActions(actions)
     			.build();
+    			log.info("========send packet");
     			sw.write(defaultFlow);
     			return Command.STOP;
         	}

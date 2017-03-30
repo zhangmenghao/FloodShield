@@ -118,10 +118,10 @@ public class DHCPPacketProcessor {
             return true;
         }
     	}
-    	finally{
-    		return false;
+    	catch(Exception e){
+    		log.info(pi.toString());
     	}
-//        return false;
+        return false;
     }
 
     public boolean doDHCPPacketProcess(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
@@ -237,7 +237,9 @@ public class DHCPPacketProcessor {
 	    .build();
 	    
 	    sw.write(defaultFlow1);
+	    log.info("========send packet");
 	    sw.write(defaultFlow2);
+	    log.info("========send packet");
 	    
 	    List<OFAction> actions = new ArrayList<OFAction>();
     	Match.Builder mb3 = sw.getOFFactory().buildMatch();
@@ -267,6 +269,8 @@ public class DHCPPacketProcessor {
 		.build();
 		
 		sw.write(defaultFlow3);
+		log.info("========send packet");
 		sw.write(defaultFlow4);
+		log.info("========send packet");
     }
 }
