@@ -128,7 +128,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     private static final long DECISION_MASK = ((1L << DECISION_BITS) - 1) << DECISION_SHIFT;
     
     private static final int TOTAL_THROUGHPUT = 1000;
-    private static final int FLOW_TABLE_NUM = 10000;
+    private static final int FLOW_TABLE_NUM = 2000;
 
     private static final short FLOWSET_BITS = 28;
     protected static final short FLOWSET_SHIFT = DECISION_BITS;

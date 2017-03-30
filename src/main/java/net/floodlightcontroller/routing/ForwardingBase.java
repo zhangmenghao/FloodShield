@@ -74,7 +74,7 @@ import org.slf4j.LoggerFactory;
 public abstract class ForwardingBase implements IOFMessageListener {
     protected static Logger log = LoggerFactory.getLogger(ForwardingBase.class);
 
-    public static int FLOWMOD_DEFAULT_IDLE_TIMEOUT = 0; // in seconds
+    public static int FLOWMOD_DEFAULT_IDLE_TIMEOUT = 5; // in seconds
     public static int FLOWMOD_DEFAULT_HARD_TIMEOUT = 0; // infinite
     public static int FLOWMOD_DEFAULT_PRIORITY = 3; // 0 is the default table-miss flow in OF1.3+, so we need to use 1, we modify it to 3
 
