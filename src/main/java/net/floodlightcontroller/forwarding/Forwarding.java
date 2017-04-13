@@ -75,6 +75,7 @@ import org.projectfloodlight.openflow.protocol.OFMessage;
 import org.projectfloodlight.openflow.protocol.OFPacketIn;
 import org.projectfloodlight.openflow.protocol.OFPacketOut;
 import org.projectfloodlight.openflow.protocol.OFPortDesc;
+import org.projectfloodlight.openflow.protocol.OFType;
 import org.projectfloodlight.openflow.protocol.OFVersion;
 import org.projectfloodlight.openflow.protocol.action.OFAction;
 import org.projectfloodlight.openflow.protocol.match.Match;
@@ -127,8 +128,8 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     private static final short DECISION_SHIFT = 0;
     private static final long DECISION_MASK = ((1L << DECISION_BITS) - 1) << DECISION_SHIFT;
     
-    private static final int TOTAL_THROUGHPUT = 1000;
-    private static final int FLOW_TABLE_NUM = 2000;
+    private static final int TOTAL_THROUGHPUT = 1000000;
+    private static final int FLOW_TABLE_NUM = 3000;
 
     private static final short FLOWSET_BITS = 28;
     protected static final short FLOWSET_SHIFT = DECISION_BITS;
@@ -239,7 +240,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     }//end this class
     @Override
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
-    	log.info("========receive packet");
+//    	log.info("========receive packet");
         switch (msg.getType()) {
             case PACKET_IN:
                 IRoutingDecision decision = null;
@@ -253,6 +254,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 }
                 return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
             case FLOW_REMOVED:
+            	log.info("###remove");
             default:
                 break;
         }
@@ -271,9 +273,6 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         	// policy 1
         	if (hostPacketInMap.containsKey(srcIp)) {
         		hostPacketInMap.get(srcIp).updateRate();
-//        		log.info("rate = " + hostPacketInMap.get(srcIp).rate
-//        				+ " number = " + hostPacketInMap.get(srcIp).number
-//        				+ " ip = " + srcIp.toString());
         		if (!hostPacketInMap.get(srcIp).allowForward()) {
         			log.info("policy 1 triggered");
         			policyTrigger = true;
@@ -320,7 +319,8 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     			.setIdleTimeout(5)
     			.setActions(actions)
     			.build();
-    			log.info("========send packet");
+//    			log.info("========send packet");
+    			log.info("###flowmod");
     			sw.write(defaultFlow);
     			return Command.STOP;
         	}
@@ -336,7 +336,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 return Command.CONTINUE;
             case FORWARD_OR_FLOOD:
             case FORWARD:
-                doForwardFlow(sw, pi, decision, cntx, false);
+                doForwardFlow(sw, pi, decision, cntx, true);
                 return Command.CONTINUE;
             case MULTICAST:
                 // treat as broadcast
@@ -357,7 +357,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
             if (eth.isBroadcast() || eth.isMulticast()) {
                 doFlood(sw, pi, decision, cntx);
             } else {
-                doForwardFlow(sw, pi, decision, cntx, false);
+                doForwardFlow(sw, pi, decision, cntx, true);
             }
         }
 
@@ -950,6 +950,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         super.startUp();
         switchService.addOFSwitchListener(this);
         routingEngineService.addRoutingDecisionChangedListener(this);
+        floodlightProviderService.addOFMessageListener(OFType.FLOW_REMOVED, this);
 
         /* Register only if we want to remove stale flows */
         if (REMOVE_FLOWS_ON_LINK_OR_PORT_DOWN) {

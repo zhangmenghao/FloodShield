@@ -237,9 +237,11 @@ public class DHCPPacketProcessor {
 	    .build();
 	    
 	    sw.write(defaultFlow1);
-	    log.info("========send packet");
+//	    log.info("========send packet");
+	    log.info("###flowmod");
 	    sw.write(defaultFlow2);
-	    log.info("========send packet");
+//	    log.info("========send packet");
+	    log.info("###flowmod");
 	    
 	    List<OFAction> actions = new ArrayList<OFAction>();
     	Match.Builder mb3 = sw.getOFFactory().buildMatch();
@@ -269,8 +271,10 @@ public class DHCPPacketProcessor {
 		.build();
 		
 		sw.write(defaultFlow3);
-		log.info("========send packet");
+//		log.info("========send packet");
+		log.info("###flowmod");
 		sw.write(defaultFlow4);
-		log.info("========send packet");
+//		log.info("========send packet");
+		log.info("###flowmod");
     }
 }

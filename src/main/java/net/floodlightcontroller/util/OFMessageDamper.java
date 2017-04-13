@@ -120,8 +120,9 @@ public class OFMessageDamper {
     public boolean write(IOFSwitch sw, OFMessage msg) {
         if (!msgTypesToCache.contains(msg.getType())) {
             log.debug("Not dampening this type of msg {}", msg);
-            log.info("========send packet");
+//            log.info("========send packet");
             sw.write(msg);
+            log.info("###flowmod");
             return true;
         }
         
@@ -132,7 +133,8 @@ public class OFMessageDamper {
             return false; 
         } else {
             log.debug("Not dampening new msg {}", msg);
-            log.info("========send packet");
+//            log.info("========send packet");
+            log.info("###flowmod");
             sw.write(msg);
             return true;
         }

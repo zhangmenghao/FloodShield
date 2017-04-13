@@ -245,7 +245,6 @@ public abstract class ForwardingBase implements IOFMessageListener {
             .setBufferId(OFBufferId.NO_BUFFER)
             .setCookie(cookie)
             .setOutPort(outPort)
-                    //.setTableId(TableId.of(0))
             .setPriority(FLOWMOD_DEFAULT_PRIORITY);
 
             FlowModUtils.setActions(fmb, actions, sw);
