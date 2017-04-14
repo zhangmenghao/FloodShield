@@ -254,7 +254,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 }
                 return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
             case FLOW_REMOVED:
-            	log.info("###remove");
+            	log.info("###remove"+sw.getId().toString());
             default:
                 break;
         }
