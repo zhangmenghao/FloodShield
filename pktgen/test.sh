@@ -51,7 +51,7 @@ function pg() {
 
     
     # Time to run
-    
+    echo "">a.txt
    
     SPEED=2
     echo "Running... ctrl^C to stop"
