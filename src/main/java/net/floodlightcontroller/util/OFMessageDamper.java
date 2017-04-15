@@ -132,6 +132,7 @@ public class OFMessageDamper {
         } else {
             log.debug("Not dampening new msg {}", msg);
             sw.write(msg);
+            log.info("###flowmod" + sw.getId().toString());
             return true;
         }
     }

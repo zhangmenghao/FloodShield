@@ -75,7 +75,7 @@ public abstract class ForwardingBase implements IOFMessageListener {
     protected static Logger log = LoggerFactory.getLogger(ForwardingBase.class);
 
     public static int FLOWMOD_DEFAULT_IDLE_TIMEOUT = 1; // in seconds
-    public static int FLOWMOD_DEFAULT_HARD_TIMEOUT = 1; // infinite
+    public static int FLOWMOD_DEFAULT_HARD_TIMEOUT = 0; // infinite
     public static int FLOWMOD_DEFAULT_PRIORITY = 3; // 0 is the default table-miss flow in OF1.3+, so we need to use 1, we modify it to 3
 
     protected static TableId FLOWMOD_DEFAULT_TABLE_ID = TableId.of(1);
@@ -245,7 +245,6 @@ public abstract class ForwardingBase implements IOFMessageListener {
             .setBufferId(OFBufferId.NO_BUFFER)
             .setCookie(cookie)
             .setOutPort(outPort)
-                    //.setTableId(TableId.of(0))
             .setPriority(FLOWMOD_DEFAULT_PRIORITY);
 
             FlowModUtils.setActions(fmb, actions, sw);

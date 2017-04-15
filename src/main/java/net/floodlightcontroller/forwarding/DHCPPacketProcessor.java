@@ -112,10 +112,15 @@ public class DHCPPacketProcessor {
     }
 
     public boolean isDHCPServerPacket(DHCP pi) {
+    	try{
         if(Arrays.equals(pi.getOption(DHCP.DHCPOptionCode.OptionCode_MessageType).getData(), DHCP_MSG_TYPE_ACK) ||
                 Arrays.equals(pi.getOption(DHCP.DHCPOptionCode.OptionCode_MessageType).getData(), DHCP_MSG_TYPE_OFFER) ) {
             return true;
         }
+    	}
+    	catch(Exception e){
+    		log.info(pi.toString());
+    	}
         return false;
     }
 
@@ -232,7 +237,11 @@ public class DHCPPacketProcessor {
 	    .build();
 	    
 	    sw.write(defaultFlow1);
+//	    log.info("========send packet");
+	    log.info("###flowmod");
 	    sw.write(defaultFlow2);
+//	    log.info("========send packet");
+	    log.info("###flowmod");
 	    
 	    List<OFAction> actions = new ArrayList<OFAction>();
     	Match.Builder mb3 = sw.getOFFactory().buildMatch();
@@ -262,6 +271,10 @@ public class DHCPPacketProcessor {
 		.build();
 		
 		sw.write(defaultFlow3);
+//		log.info("========send packet");
+		log.info("###flowmod");
 		sw.write(defaultFlow4);
+//		log.info("========send packet");
+		log.info("###flowmod");
     }
 }

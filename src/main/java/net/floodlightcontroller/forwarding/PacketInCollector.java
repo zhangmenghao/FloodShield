@@ -20,12 +20,12 @@ public class PacketInCollector {
 	private static int TOTAL_TYPE = 0;
 	private static int SINGLE_TYPE = 1;
 	protected static final Logger log = LoggerFactory.getLogger(PacketInCollector.class);
-	private int rateNumber;
-	private long rate;
+	public int rateNumber;
+	public long rate;
 	private long rateLastTimeStamp;
 	private LinkedList<Integer> numList;
 	private int tempNum;
-	private int number;
+	public int number;
 	private IPv4Address ip;
 	private int collectorType;
 	
@@ -65,13 +65,14 @@ public class PacketInCollector {
 	}
 	
 	public boolean allowForward() {
-		if (rate < 1000 && rate > 0)  {
+		if (collectorType == SINGLE_TYPE && rate < 300 && rate > 0)  {
 			return false;
 		}
-		if (numList.size() > 6) {
-			if (number > 50) {
-				return false;
-			}
+		if (collectorType == TOTAL_TYPE && rate < 1000 && rate > 0)  {
+			return false;
+		}
+		if (collectorType == SINGLE_TYPE && number > 400) {
+			return false;
 		}
 		return true;
 	}
@@ -79,16 +80,25 @@ public class PacketInCollector {
 	public synchronized void updateNumber() {
 		this.tempNum += 1;
 	}
-	public synchronized void updateRate(long ts) {
-		if (rate == -1) {
+	public synchronized void updateRate() {
+		long ts = System.currentTimeMillis();
+		if (rateNumber == 0) {
 			rateLastTimeStamp = ts;
 		}
 		this.rateNumber += 1;
 		this.tempNum += 1;
-		if (rateNumber == 10) {
-			rate = ts - rateLastTimeStamp;
-			rateLastTimeStamp = ts;
-			rateNumber = 0;
+		if (collectorType == SINGLE_TYPE) {
+			if (rateNumber == 50) {
+				rate = ts - rateLastTimeStamp;
+				rateLastTimeStamp = ts;
+				rateNumber = 0;
+			}
+		} else if (collectorType == TOTAL_TYPE) {
+			if (rateNumber == 400000) {
+				rate = ts - rateLastTimeStamp;
+				rateLastTimeStamp = ts;
+				rateNumber = 0;
+			}
 		}
 	}
 	public synchronized void resetRate() {
@@ -106,10 +116,6 @@ public class PacketInCollector {
         	}
     		numList.add(tempNum);
     		if (numList.size() > 5) {
-//    			if (collectorType == SINGLE_TYPE)
-//    				log.info("udpate ip = " + ip.toString() + " number = " + number + " rate = " + rate);
-//    			else if (collectorType == TOTAL_TYPE)
-//    				log.info("update total number = " + number);
     			number = numList.get(numList.size()-1) - numList.get(numList.size()-6);
         		while (numList.size() > 6) numList.remove(0);
     		}
