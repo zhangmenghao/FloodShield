@@ -19,6 +19,9 @@ import net.floodlightcontroller.routing.IRoutingDecision;
 import net.floodlightcontroller.routing.IRoutingService;
 import net.floodlightcontroller.routing.Path;
 import net.floodlightcontroller.routing.RoutingDecision;
+import net.floodlightcontroller.statistics.HostFlowStatistics;
+import net.floodlightcontroller.statistics.OFSwitchFlowStatistics;
+import net.floodlightcontroller.statistics.StatisticsCollector;
 import net.floodlightcontroller.topology.ITopologyService;
 import net.floodlightcontroller.util.OFMessageDamper;
 import net.floodlightcontroller.util.OFMessageUtils;
@@ -45,6 +48,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import static net.floodlightcontroller.dhcpserver.DHCPServer.DHCP_MSG_TYPE_ACK;
@@ -161,6 +165,7 @@ public class DHCPPacketProcessor {
             IOFSwitch sw_o = switchService.getSwitch(switchDPID);
             OFPort outPort = switchPortList.get(indx).getPortId();
 
+<<<<<<< HEAD
             // add new ip into Forwarding.host-pi-map
             IPv4Address iip = dhcpPayload.getYourIPAddress();
             if (!Forwarding.hostPacketInMap.containsKey(dhcpPayload.getYourIPAddress()))
@@ -179,6 +184,14 @@ public class DHCPPacketProcessor {
 
             this.writeIPMACBindFlowToSw(sw_o, dhcpPayload.getYourIPAddress(), dhcpPayload.getClientHardwareAddress(),outPort);
 
+=======
+            // add new ip into statistics
+            HostFlowStatistics entry = new HostFlowStatistics();
+            StatisticsCollector.hostFlowStatisticHashMap.put(dhcpPayload.getYourIPAddress(), entry);
+            
+            this.pushDHCPReplyToClient(sw_o,pi,outPort,cntx);
+            this.writeIPMACBindFlowToSw(sw_o, dhcpPayload.getYourIPAddress(), dhcpPayload.getClientHardwareAddress());
+>>>>>>> 30a56d63f0a7a6fbbfcc4a8f6cb7b136fdf638fe
             this.dhcpBindingTable.addnewItem(dhcpPayload.getClientHardwareAddress(), sw_o, outPort,
                                         dhcpPayload.getYourIPAddress());
 
@@ -213,6 +226,7 @@ public class DHCPPacketProcessor {
     	mb.setExact(MatchField.ETH_SRC, mac);
     	mb.setExact(MatchField.IN_PORT, port);
 
+<<<<<<< HEAD
     	Match.Builder mb2 = sw.getOFFactory().buildMatch();
     	mb2.setExact(MatchField.ETH_TYPE, EthType.ARP);
     	mb2.setExact(MatchField.ETH_SRC, mac);
@@ -276,5 +290,38 @@ public class DHCPPacketProcessor {
 		sw.write(defaultFlow4);
 //		log.info("========send packet");
 		log.info("###flowmod");
+=======
+        List<OFAction> actions = new ArrayList<OFAction>();
+        OFActionOutput.Builder aob = sw.getOFFactory().actions().buildOutput();
+        aob.setPort(OFPort.CONTROLLER);
+        aob.setMaxLen(Integer.MAX_VALUE);
+        actions.add(aob.build());
+
+        OFFlowAdd defaultFlow3 = sw.getOFFactory().buildFlowAdd()
+                .setMatch(mb.build())
+                .setTableId(TableId.of(0))
+                .setPriority(1)
+                .setActions(actions)
+                .build();
+
+        OFFlowAdd defaultFlow2 = sw.getOFFactory().buildFlowAdd()
+                .setMatch(mb2.build())
+                .setTableId(TableId.of(0))
+                .setPriority(1)
+                .setActions(actions)
+                .build();
+        
+//        Match m1 = mb.build();
+//        Match m2 = mb2.build();
+//        if (!Forwarding.flowHostMap.containsKey(m1.toString())) {
+//        	Forwarding.flowHostMap.put(m1.toString(), ip);
+//        }
+//        if (!Forwarding.flowHostMap.containsKey(m2.toString())) {
+//        	Forwarding.flowHostMap.put(m2.toString(), ip);
+//        }
+
+        sw.write(defaultFlow3);
+        sw.write(defaultFlow2);
+>>>>>>> 30a56d63f0a7a6fbbfcc4a8f6cb7b136fdf638fe
     }
 }

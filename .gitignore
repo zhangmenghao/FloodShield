@@ -7,6 +7,10 @@ floodlight.iml
 .idea
 .idea/*
 !.gitignore
+<<<<<<< HEAD
 target/bin-test
 *.DS_Store
 target/bin/.gitignore
+=======
+*.DS_Store
+>>>>>>> 30a56d63f0a7a6fbbfcc4a8f6cb7b136fdf638fe
