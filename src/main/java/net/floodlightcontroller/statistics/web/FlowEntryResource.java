@@ -19,6 +19,8 @@ import java.util.Map;
 public class FlowEntryResource extends ServerResource {
     private static String FLOW_NUMBER = "FLOW_NUMBER";
     private static String HARD_NUMBER = "HARD_NUMBER";
+    private static String HIGH_NUMBER = "HIGH_NUMBER";
+    private static String LOW_NUMBER = "LOW_NUMBER";
     private static String INVALID_RATE = "INVALID_RATE";
     private static String SWITCH_ID = "SWITCH_ID";
     private static String SWITCH_STATISTIC = "SWITCH_STATISTIC";
@@ -49,5 +51,10 @@ public class FlowEntryResource extends ServerResource {
         map.put(INVALID_RATE, new Double(all_invalid/all_nmb));
         map.put(SWITCH_STATISTIC,switch_stats);
         return map;
+    }
+    
+    public HashMap<DatapathId, OFSwitchFlowStatistics> getMap() {
+    	StatisticsCollector statisticsService = (StatisticsCollector) getContext().getAttributes().get(IStatisticsService.class.getCanonicalName());
+    	return statisticsService.switchFlowStatisticsHashMap;
     }
 }
