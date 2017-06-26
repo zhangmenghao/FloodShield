@@ -17,15 +17,8 @@
 
 package net.floodlightcontroller.forwarding;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.floodlightcontroller.core.FloodlightContext;
@@ -51,11 +44,7 @@ import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.packet.IPv6;
 import net.floodlightcontroller.packet.TCP;
 import net.floodlightcontroller.packet.UDP;
-import net.floodlightcontroller.routing.ForwardingBase;
-import net.floodlightcontroller.routing.IRoutingDecision;
-import net.floodlightcontroller.routing.IRoutingDecisionChangedListener;
-import net.floodlightcontroller.routing.IRoutingService;
-import net.floodlightcontroller.routing.Path;
+import net.floodlightcontroller.routing.*;
 import net.floodlightcontroller.topology.ITopologyService;
 import net.floodlightcontroller.util.FlowModUtils;
 import net.floodlightcontroller.util.OFDPAUtils;
@@ -129,6 +118,13 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     private static final long FLOWSET_MASK = ((1L << FLOWSET_BITS) - 1) << FLOWSET_SHIFT;
     private static final long FLOWSET_MAX = (long) (Math.pow(2, FLOWSET_BITS) - 1);
     protected static FlowSetIdRegistry flowSetIdRegistry;
+
+    private DHCPPacketProcessor dhcpPacketProcessor;
+    private PacketInMonitor packetInMonitor;
+
+    public static HashMap<DatapathId, DatapathCollector> datapathMap;
+    public static HashMap<IPv4Address, PacketInCollector> hostPacketInMap;
+    public static PacketInCollector totalPacketIn;
 
     protected static class FlowSetIdRegistry {
         private volatile Map<NodePortTuple, Set<U64>> nptToFlowSetIds;
@@ -223,6 +219,29 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 }
             }
         }
+    }
+
+    @Override
+    public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
+//    	log.info("========receive packet");
+        switch (msg.getType()) {
+            case PACKET_IN:
+                IRoutingDecision decision = null;
+                if (cntx != null) {
+                    decision = RoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION);
+                }
+                if(this.dhcpPacketProcessor.doDHCPPacketProcess(sw,msg,cntx)) break;
+                if(this.dhcpPacketProcessor.isDHCPPacket(IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD))) {
+                    log.info("request");
+                    doFlood(sw,(OFPacketIn)msg,decision,cntx);
+                }
+                return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
+            case FLOW_REMOVED:
+                log.info("###remove"+sw.getId().toString());
+            default:
+                break;
+        }
+        return Command.CONTINUE;
     }
 
     @Override
@@ -755,7 +774,18 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         this.switchService = context.getServiceImpl(IOFSwitchService.class);
         this.linkService = context.getServiceImpl(ILinkDiscoveryService.class);
 
+        //DHCP AND PACKET SUPERVISION -By dalaoshe
         flowSetIdRegistry = FlowSetIdRegistry.getInstance();
+
+        this.dhcpPacketProcessor = new DHCPPacketProcessor();
+        this.dhcpPacketProcessor.registerForwardingModule(this.switchService,this.routingEngineService,this.topologyService,this.messageDamper);
+        this.packetInMonitor = new PacketInMonitor();
+        this.packetInMonitor.registerPacketInMonitor(this.switchService);
+
+        this.hostPacketInMap = new HashMap<IPv4Address, PacketInCollector>();
+        this.totalPacketIn = new PacketInCollector();
+        this.datapathMap = new HashMap<DatapathId, DatapathCollector>();
+
 
         Map<String, String> configParameters = context.getConfigParams(this);
         String tmp = configParameters.get("hard-timeout");
