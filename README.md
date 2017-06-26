@@ -2,11 +2,6 @@ Flow-Watcher: A DoS Attack Defense Extension for the Infrastructure of Software-
 ====================================
 
 A brief introduction
--------------------
-
-[![Build Status](https://travis-ci.org/floodlight/floodlight.svg?branch=master)](https://travis-ci.org/floodlight/floodlight)
-
-A brief introduction
 ---------------
 
 By decoupling the control plane from the data plane, Software-Defined Networking(SDN) provides unprecedented programmability, automation and network innovations to the traditional network.
@@ -18,4 +13,4 @@ Through concrete code implementation and detailed experiment test, we demonstrat
 
 Contact us
 ---------------------
-Any suggestion is appreciated as FTGuard is still a research prototype. Please feel free to fork FTGuard from us on the github or send email(zhangmenghao0503@gmail.com) to us for any questions.
+Any suggestion is appreciated as Flow-Watcher is still a research prototype. Please feel free to fork Flow-Watcher from us on the github or send email(zhangmenghao0503@gmail.com) to us for any questions.
