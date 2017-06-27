@@ -51,6 +51,8 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 	public static final ShieldManager shieldManager = new ShieldManager();
 	public static final HashMap<IPv4Address, HostEntry> hostFlowMap
 		= new HashMap<IPv4Address, HostEntry>();
+	public static final HashMap<IPv4Address, DatapathId> hostDpMap
+		= new HashMap<IPv4Address, DatapathId>();
 	
 	/**
 	 * Run periodically to collect all port statistics. This only collects
@@ -81,20 +83,20 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 				for (IPv4Address ip : hostFlowMap.keySet())
 					hostFlowMap.get(ip).init();
 				for (Entry<DatapathId, List<OFStatsReply>> e : replies.entrySet()) {
-//					String dpId = e.getKey().toString();
+					String dpId = e.getKey().toString();
 					for (OFStatsReply reply : e.getValue()) {
 						OFFlowStatsReply fsr = (OFFlowStatsReply) reply;
 						for (OFFlowStatsEntry pse : fsr.getEntries()) {
 							Match match = pse.getMatch();
 							IPv4Address ip = null;
-							if (!pse.getTableId().toString().equals("0x1"))
+							if (!pse.getTableId().toString().equals("0x0"))
 								continue;
 							if (pse.getHardTimeout() == 0 && pse.getIdleTimeout() == 0)
 								continue;
 							try {
 								ip = match.get(MatchField.IPV4_SRC);
-								hostFlowMap.get(ip).addHighCount(pse);
-								log.info("######SRC IP = {}", ip.toString());
+								if (hostDpMap.get(ip).toString().equals(dpId))
+									hostFlowMap.get(ip).addHighCount(pse);
 							} catch (NullPointerException exception) {}
 						}
 					}

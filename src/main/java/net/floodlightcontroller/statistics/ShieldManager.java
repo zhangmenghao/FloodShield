@@ -39,6 +39,7 @@ public class ShieldManager implements IFloodlightModule {
 	public static void addHost(IPv4Address ip, IOFSwitch sw) {
 		if (!StatisticsCollector.hostFlowMap.containsKey(ip)) {
 			StatisticsCollector.hostFlowMap.put(ip, new HostEntry(ip, sw));
+			StatisticsCollector.hostDpMap.put(ip, sw.getId());
 			log.debug("######ADD-IP-{}, {}", ip.toString(), sw.getId().toString());
 		}
 	}

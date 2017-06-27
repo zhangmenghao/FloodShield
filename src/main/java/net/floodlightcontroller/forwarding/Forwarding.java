@@ -244,21 +244,20 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 
     @Override
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
+        Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
+        IPv4Address srcIp = null;
+        if (eth.getEtherType() == EthType.IPv4) {
+        	IPv4 ip = (IPv4) eth.getPayload();
+        	srcIp = ip.getSourceAddress();
+        	if (!srcIp.toString().equals("0.0.0.0")) ShieldManager.addHost(srcIp, sw);
+        }
         switch (msg.getType()) {
             case PACKET_IN:
                 IRoutingDecision decision = null;
                 if (cntx != null) {
                     decision = RoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION);
                 }
-                if(this.dhcpPacketProcessor.doDHCPPacketProcess(sw,msg,cntx)) break;
-                if(this.dhcpPacketProcessor.isDHCPPacket(IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD))) {
-                    log.info("request");
-                    doFlood(sw,(OFPacketIn)msg,decision,cntx);
-                }
-                Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
                 if (eth.getEtherType() == EthType.IPv4) {
-                	IPv4 ip = (IPv4) eth.getPayload();
-                	IPv4Address srcIp = ip.getSourceAddress();
                 	if (srcIp != null) {
                 		log.debug("######PACKET_IN-{}-", srcIp.toString());
                 		if (StatisticsCollector.hostFlowMap.containsKey(srcIp)) {
@@ -269,7 +268,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 }
                 return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
             case FLOW_REMOVED:
-                log.info("###remove"+sw.getId().toString());
+                log.debug("###remove"+sw.getId().toString());
             default:
                 break;
         }

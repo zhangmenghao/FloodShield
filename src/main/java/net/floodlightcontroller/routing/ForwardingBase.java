@@ -254,11 +254,7 @@ public abstract class ForwardingBase implements IOFMessageListener {
 
             /* Configure for particular switch pipeline */
             if (sw.getOFFactory().getVersion().compareTo(OFVersion.OF_10) != 0) {
-            	if (indx < 2) {
-            		fmb.setTableId(TableId.of(1));
-            	} else {
-            		fmb.setTableId(TableId.of(0));
-            	}
+            	fmb.setTableId(TableId.of(0));
             }
                         
             if (log.isTraceEnabled()) {
@@ -271,7 +267,7 @@ public abstract class ForwardingBase implements IOFMessageListener {
             }
 
             if (OFDPAUtils.isOFDPASwitch(sw)) {
-                OFDPAUtils.addLearningSwitchFlow(sw, cookie, 
+                OFDPAUtils.addLearningSwitchFlow(sw, cookie,
                         FLOWMOD_DEFAULT_PRIORITY, 
                         FLOWMOD_DEFAULT_HARD_TIMEOUT,
                         FLOWMOD_DEFAULT_IDLE_TIMEOUT,
