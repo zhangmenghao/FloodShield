@@ -45,6 +45,8 @@ import net.floodlightcontroller.packet.IPv6;
 import net.floodlightcontroller.packet.TCP;
 import net.floodlightcontroller.packet.UDP;
 import net.floodlightcontroller.routing.*;
+import net.floodlightcontroller.statistics.ShieldManager;
+import net.floodlightcontroller.statistics.StatisticsCollector;
 import net.floodlightcontroller.topology.ITopologyService;
 import net.floodlightcontroller.util.FlowModUtils;
 import net.floodlightcontroller.util.OFDPAUtils;
@@ -223,7 +225,13 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 
     @Override
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
-//    	log.info("========receive packet");
+        Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
+        IPv4Address srcIp = null;
+        if (eth.getEtherType() == EthType.IPv4) {
+        	IPv4 ip = (IPv4) eth.getPayload();
+        	srcIp = ip.getSourceAddress();
+        	if (!srcIp.toString().equals("0.0.0.0")) ShieldManager.addHost(srcIp, sw.getId());
+        }
         switch (msg.getType()) {
             case PACKET_IN:
                 IRoutingDecision decision = null;
@@ -234,6 +242,13 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 if(this.dhcpPacketProcessor.isDHCPPacket(IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD))) {
                     log.info("request");
                     doFlood(sw,(OFPacketIn)msg,decision,cntx);
+                }
+                if (eth.getEtherType() == EthType.IPv4) {
+                	if (srcIp != null) {
+                		log.debug("######PACKET_IN-{}-", srcIp.toString());
+                		if (StatisticsCollector.hostFlowMap.containsKey(srcIp))
+                			StatisticsCollector.hostFlowMap.get(srcIp).piCopy += 1;
+                	}
                 }
                 return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
             case FLOW_REMOVED:

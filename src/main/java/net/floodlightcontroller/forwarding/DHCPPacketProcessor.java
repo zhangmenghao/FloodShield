@@ -215,7 +215,7 @@ public class DHCPPacketProcessor {
 	    .build();
 
 	    OFFlowAdd defaultFlow2 = sw.getOFFactory().buildFlowAdd()
-	    .setMatch(mb.build())
+	    .setMatch(mb2.build())
 	    .setTableId(TableId.of(0))
 	    .setPriority(2)
 	    .setInstructions(instructions)
@@ -236,7 +236,7 @@ public class DHCPPacketProcessor {
     	mb4.setExact(MatchField.IN_PORT, port);
 
 		OFFlowAdd defaultFlow3 = sw.getOFFactory().buildFlowAdd()
-		.setMatch(mb.build())
+		.setMatch(mb3.build())
 		.setTableId(TableId.of(0))
 		.setPriority(1)
 		.setActions(actions)
@@ -245,7 +245,7 @@ public class DHCPPacketProcessor {
 		.build();
 
 		OFFlowAdd defaultFlow4 = sw.getOFFactory().buildFlowAdd()
-		.setMatch(mb.build())
+		.setMatch(mb4.build())
 		.setTableId(TableId.of(0))
 		.setPriority(1)
 		.setActions(actions)

@@ -1,0 +1,127 @@
+package net.floodlightcontroller.statistics;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
+
+import org.projectfloodlight.openflow.types.DatapathId;
+import org.projectfloodlight.openflow.types.IPv4Address;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import net.floodlightcontroller.core.IFloodlightProviderService;
+import net.floodlightcontroller.core.module.FloodlightModuleContext;
+import net.floodlightcontroller.core.module.FloodlightModuleException;
+import net.floodlightcontroller.core.module.IFloodlightModule;
+import net.floodlightcontroller.core.module.IFloodlightService;
+
+public class ShieldManager implements IFloodlightModule {
+	private static final Logger log = LoggerFactory.getLogger(ShieldManager.class);
+	protected IFloodlightProviderService floodlightProvider;
+	
+	private static final String ALPHA_STR = "alpha";
+	private static final String HIGH_COUNT_STR = "highcount";
+	public static double alpha = 0;
+	public static int highCount = 0;
+	private static final String PI_LOW_STR = "pilow";
+	private static final String PI_HIGH_STR = "pihigh";
+	public static int piLow = 0;
+	public static int piHigh = 0;
+	private static final String COUNT_LOW_STR = "countlow";
+	private static final String COUNT_HIGH_STR = "counthigh";
+	public static int countLow = 0;
+	public static int countHigh = 0;
+	
+	
+	public ShieldManager() {}
+
+	public static void addHost(IPv4Address ip, DatapathId id) {
+		if (!StatisticsCollector.hostDpMap.containsKey(ip)) {
+			StatisticsCollector.hostDpMap.put(ip, id);	
+			StatisticsCollector.hostFlowMap.put(ip, new HostEntry(ip));
+			log.debug("######ADD-IP-{}, {}", ip.toString(), id.toString());
+		}
+	}
+
+	@Override
+	public Collection<Class<? extends IFloodlightService>> getModuleServices() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Map<Class<? extends IFloodlightService>, IFloodlightService> getServiceImpls() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Collection<Class<? extends IFloodlightService>> getModuleDependencies() {
+		// TODO Auto-generated method stub
+	    Collection<Class<? extends IFloodlightService>> l =
+	            new ArrayList<Class<? extends IFloodlightService>>();
+	    l.add(IFloodlightProviderService.class);
+	    return l;
+	}
+
+	@Override
+	public void init(FloodlightModuleContext context) throws FloodlightModuleException {
+		// TODO Auto-generated method stub
+		floodlightProvider = context.getServiceImpl(IFloodlightProviderService.class);
+		Map<String, String> config = context.getConfigParams(this);
+		if (config.containsKey(ALPHA_STR)) {
+			try {
+				alpha = Double.parseDouble(config.get(ALPHA_STR).trim());
+				log.debug("######INIT-{} = {}", ALPHA_STR, alpha);
+			} catch (Exception e) {
+				log.error("Could not parse '{}'. Using default of {}", ALPHA_STR, alpha);
+			}
+		}
+		if (config.containsKey(HIGH_COUNT_STR)) {
+			try {
+				highCount = Integer.parseInt(config.get(HIGH_COUNT_STR).trim());
+				log.debug("######INIT-{} = {}", HIGH_COUNT_STR, highCount);
+			} catch (Exception e) {
+				log.error("Could not parse '{}'. Using default of {}", HIGH_COUNT_STR, highCount);
+			}
+		}
+		if (config.containsKey(PI_LOW_STR)) {
+			try {
+				piLow = Integer.parseInt(config.get(PI_LOW_STR).trim());
+				log.debug("######INIT-{} = {}", PI_LOW_STR, piLow);
+			} catch (Exception e) {
+				log.error("Could not parse '{}'. Using default of {}", PI_LOW_STR, piLow);
+			}
+		}
+		if (config.containsKey(PI_HIGH_STR)) {
+			try {
+				piHigh = Integer.parseInt(config.get(PI_HIGH_STR).trim());
+				log.debug("######INIT-{} = {}", PI_HIGH_STR, piHigh);
+			} catch (Exception e) {
+				log.error("Could not parse '{}'. Using default of {}", PI_HIGH_STR, piHigh);
+			}
+		}
+		if (config.containsKey(COUNT_LOW_STR)) {
+			try {
+				countLow = Integer.parseInt(config.get(COUNT_LOW_STR).trim());
+				log.debug("######INIT-{} = {}", COUNT_LOW_STR, countLow);
+			} catch (Exception e) {
+				log.error("Could not parse '{}'. Using default of {}", COUNT_LOW_STR, countLow);
+			}
+		}
+		if (config.containsKey(COUNT_HIGH_STR)) {
+			try {
+				countHigh = Integer.parseInt(config.get(COUNT_HIGH_STR).trim());
+				log.debug("######INIT-{} = {}", COUNT_HIGH_STR, countHigh);
+			} catch (Exception e) {
+				log.error("Could not parse '{}'. Using default of {}", COUNT_HIGH_STR, countHigh);
+			}
+		}
+	}
+
+	@Override
+	public void startUp(FloodlightModuleContext context) throws FloodlightModuleException {
+		// TODO Auto-generated method stub
+		
+	}
+}

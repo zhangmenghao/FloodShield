@@ -30,9 +30,4 @@ public class DatapathCollector {
 		}
 		return ip;
 	}
-	
-	public int getNum() {
-		int number = (int) StatisticsCollector.switchFlowStatisticsHashMap.get(id).getAll_flow_nmb();
-		return number;
-	}
 }
