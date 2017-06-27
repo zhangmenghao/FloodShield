@@ -22,6 +22,7 @@ import net.floodlightcontroller.core.IOFSwitchBackend;
 import net.floodlightcontroller.core.PortChangeEvent;
 import net.floodlightcontroller.core.SwitchDescription;
 import net.floodlightcontroller.core.internal.OFSwitchAppHandshakePlugin.PluginResultType;
+import net.floodlightcontroller.packet.UDP;
 
 import org.projectfloodlight.openflow.protocol.OFActionType;
 import org.projectfloodlight.openflow.protocol.OFBadRequestCode;
@@ -68,11 +69,16 @@ import org.projectfloodlight.openflow.protocol.OFTableFeaturesStatsRequest;
 import org.projectfloodlight.openflow.protocol.OFType;
 import org.projectfloodlight.openflow.protocol.OFVersion;
 import org.projectfloodlight.openflow.protocol.action.OFAction;
+import org.projectfloodlight.openflow.protocol.action.OFActionOutput;
 import org.projectfloodlight.openflow.protocol.actionid.OFActionId;
 import org.projectfloodlight.openflow.protocol.errormsg.OFBadRequestErrorMsg;
 import org.projectfloodlight.openflow.protocol.errormsg.OFFlowModFailedErrorMsg;
 import org.projectfloodlight.openflow.protocol.instruction.OFInstruction;
+import org.projectfloodlight.openflow.protocol.match.Match.Builder;
+import org.projectfloodlight.openflow.protocol.match.MatchField;
 import org.projectfloodlight.openflow.types.DatapathId;
+import org.projectfloodlight.openflow.types.EthType;
+import org.projectfloodlight.openflow.types.IpProtocol;
 import org.projectfloodlight.openflow.types.OFAuxId;
 import org.projectfloodlight.openflow.types.OFGroup;
 import org.projectfloodlight.openflow.types.OFPort;
@@ -81,6 +87,7 @@ import org.projectfloodlight.openflow.types.U64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.deser.DataFormatReaders.Match;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -489,6 +496,7 @@ public class OFSwitchHandshakeHandler implements IOFConnectionListener {
 			ArrayList<OFMessage> flows = new ArrayList<OFMessage>();
 
 			/* If we received a table features reply, iterate over the tables */
+			sw.setMaxTableForTableMissFlow(TableId.of(2));	
 			if (!this.sw.getTables().isEmpty()) {
 				short missCount = 0;
 				for (TableId tid : this.sw.getTables()) {
@@ -523,6 +531,39 @@ public class OFSwitchHandshakeHandler implements IOFConnectionListener {
 				}
 			}
 			this.sw.write(flows);
+			
+			// new version
+			List<OFAction> actions0 = new ArrayList<OFAction>();
+			OFActionOutput.Builder aob3 = sw.getOFFactory().actions().buildOutput();
+			aob3.setPort(OFPort.CONTROLLER);
+			aob3.setMaxLen(Integer.MAX_VALUE);
+			actions0.add(aob3.build());
+			
+			Builder mb1 = this.sw.getOFFactory().buildMatch();
+			mb1.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+			mb1.setExact(MatchField.IP_PROTO, IpProtocol.UDP);
+			mb1.setExact(MatchField.UDP_SRC, UDP.DHCP_SERVER_PORT);
+			mb1.setExact(MatchField.UDP_DST, UDP.DHCP_CLIENT_PORT);
+			OFFlowAdd defaultFlow1 = this.factory.buildFlowAdd()
+					.setMatch(mb1.build())
+					.setTableId(TableId.of(0))
+					.setPriority(2)
+					.setActions(actions0)
+					.build();
+			this.sw.write(defaultFlow1);
+			
+			Builder mb2 = this.sw.getOFFactory().buildMatch();
+			mb2.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+			mb2.setExact(MatchField.IP_PROTO, IpProtocol.UDP);
+			mb2.setExact(MatchField.UDP_SRC, UDP.DHCP_CLIENT_PORT);
+			mb2.setExact(MatchField.UDP_DST, UDP.DHCP_SERVER_PORT);
+			OFFlowAdd defaultFlow2 = this.factory.buildFlowAdd()
+					.setMatch(mb2.build())
+					.setTableId(TableId.of(0))
+					.setPriority(2)
+					.setActions(actions0)
+					.build();
+			this.sw.write(defaultFlow2);
 		}
 	}
 
