@@ -55,6 +55,7 @@ import net.floodlightcontroller.util.OFPortMode;
 import net.floodlightcontroller.util.OFPortModeTuple;
 import net.floodlightcontroller.util.ParseUtils;
 
+import org.projectfloodlight.openflow.protocol.OFFlowAdd;
 import org.projectfloodlight.openflow.protocol.OFFlowMod;
 import org.projectfloodlight.openflow.protocol.OFFlowModCommand;
 import org.projectfloodlight.openflow.protocol.OFGroupType;
@@ -222,16 +223,27 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
             }
         }
     }
+    
+    public static void installDropEntry(IPv4Address ip, IOFSwitch sw) {
+	    List<OFAction> actions = new ArrayList<OFAction>();
+    	Match.Builder mb = sw.getOFFactory().buildMatch();
+    	mb.setExact(MatchField.ETH_TYPE, EthType.IPv4);
+    	mb.setExact(MatchField.IPV4_SRC, ip);
+    	int interval = StatisticsCollector.hostStatsInterval;
+		OFFlowAdd defaultFlow = sw.getOFFactory().buildFlowAdd()
+		.setMatch(mb.build())
+		.setTableId(TableId.of(0))
+		.setPriority(4)
+		.setHardTimeout(interval)
+		.setIdleTimeout(interval)
+		.setActions(actions)
+		.build();
+		log.info("###flowmod");
+		sw.write(defaultFlow);
+    }
 
     @Override
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
-        Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
-        IPv4Address srcIp = null;
-        if (eth.getEtherType() == EthType.IPv4) {
-        	IPv4 ip = (IPv4) eth.getPayload();
-        	srcIp = ip.getSourceAddress();
-        	if (!srcIp.toString().equals("0.0.0.0")) ShieldManager.addHost(srcIp, sw.getId());
-        }
         switch (msg.getType()) {
             case PACKET_IN:
                 IRoutingDecision decision = null;
@@ -243,11 +255,16 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                     log.info("request");
                     doFlood(sw,(OFPacketIn)msg,decision,cntx);
                 }
+                Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
                 if (eth.getEtherType() == EthType.IPv4) {
+                	IPv4 ip = (IPv4) eth.getPayload();
+                	IPv4Address srcIp = ip.getSourceAddress();
                 	if (srcIp != null) {
                 		log.debug("######PACKET_IN-{}-", srcIp.toString());
-                		if (StatisticsCollector.hostFlowMap.containsKey(srcIp))
+                		if (StatisticsCollector.hostFlowMap.containsKey(srcIp)) {
+                			if (StatisticsCollector.hostFlowMap.get(srcIp).level == 1) return Command.STOP;
                 			StatisticsCollector.hostFlowMap.get(srcIp).piCopy += 1;
+                		}
                 	}
                 }
                 return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);

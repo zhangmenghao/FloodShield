@@ -46,13 +46,11 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 	
 	// FT-Guard part
 	private static boolean isEnabled = true;
-	private static int hostStatsInterval = 3;
+	public static int hostStatsInterval = 3;
 	private static ScheduledFuture<?> hostStatsCollector;
 	public static final ShieldManager shieldManager = new ShieldManager();
 	public static final HashMap<IPv4Address, HostEntry> hostFlowMap
 		= new HashMap<IPv4Address, HostEntry>();
-	public static final HashMap<IPv4Address, DatapathId> hostDpMap
-		= new HashMap<IPv4Address, DatapathId>();
 	
 	/**
 	 * Run periodically to collect all port statistics. This only collects
@@ -78,10 +76,12 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 		@Override
 		public void run() {
 			try {
-				log.info("====================================");
+				log.debug("====================================");
 				Map<DatapathId, List<OFStatsReply>> replies = getSwitchStatistics(switchService.getAllSwitchDpids(), OFStatsType.FLOW);
+				for (IPv4Address ip : hostFlowMap.keySet())
+					hostFlowMap.get(ip).init();
 				for (Entry<DatapathId, List<OFStatsReply>> e : replies.entrySet()) {
-					String dpId = e.getKey().toString();
+//					String dpId = e.getKey().toString();
 					for (OFStatsReply reply : e.getValue()) {
 						OFFlowStatsReply fsr = (OFFlowStatsReply) reply;
 						for (OFFlowStatsEntry pse : fsr.getEntries()) {
@@ -93,10 +93,8 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 								continue;
 							try {
 								ip = match.get(MatchField.IPV4_SRC);
-								if (hostDpMap.get(ip).toString().equals(dpId))
-									hostFlowMap.get(ip).addHighCount(pse);
-								else
-									log.info("######NOT EDGE SWITCH");
+								hostFlowMap.get(ip).addHighCount(pse);
+								log.info("######SRC IP = {}", ip.toString());
 							} catch (NullPointerException exception) {}
 						}
 					}

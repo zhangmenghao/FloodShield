@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.floodlightcontroller.core.IFloodlightProviderService;
+import net.floodlightcontroller.core.IOFSwitch;
 import net.floodlightcontroller.core.module.FloodlightModuleContext;
 import net.floodlightcontroller.core.module.FloodlightModuleException;
 import net.floodlightcontroller.core.module.IFloodlightModule;
@@ -35,11 +36,10 @@ public class ShieldManager implements IFloodlightModule {
 	
 	public ShieldManager() {}
 
-	public static void addHost(IPv4Address ip, DatapathId id) {
-		if (!StatisticsCollector.hostDpMap.containsKey(ip)) {
-			StatisticsCollector.hostDpMap.put(ip, id);	
-			StatisticsCollector.hostFlowMap.put(ip, new HostEntry(ip));
-			log.debug("######ADD-IP-{}, {}", ip.toString(), id.toString());
+	public static void addHost(IPv4Address ip, IOFSwitch sw) {
+		if (!StatisticsCollector.hostFlowMap.containsKey(ip)) {
+			StatisticsCollector.hostFlowMap.put(ip, new HostEntry(ip, sw));
+			log.debug("######ADD-IP-{}, {}", ip.toString(), sw.getId().toString());
 		}
 	}
 

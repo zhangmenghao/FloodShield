@@ -6,33 +6,38 @@ import org.projectfloodlight.openflow.types.IPv4Address;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.floodlightcontroller.core.IOFSwitch;
+import net.floodlightcontroller.forwarding.Forwarding;
+
 public class HostEntry {
 	private static final Logger log = LoggerFactory.getLogger(HostEntry.class);
 	private IPv4Address ip;
+	private IOFSwitch sw;
 	
-	public int importance;
 	public int pi;
 	public int piCopy;
 	public double score;
+	public int level;
 	public boolean FIRST_SCORE;
 	private int highFlowNumber;
-	private int number; // Ni
+	private int number;
 	
-	public HostEntry(IPv4Address ipAddress) {
+	public HostEntry(IPv4Address ipAddress, IOFSwitch swit) {
 		number = 0;
 		highFlowNumber = 0;
 		ip = ipAddress;
+		sw = swit;
 		pi = 0;
-		importance = 1;
 		score = 0;
 		piCopy = 0;
 		FIRST_SCORE = true;
+		level = -1;
 	}
 	
 	public void init() {
 		number = 0;
 		highFlowNumber = 0;
-		importance = 1;
+		level = -1;
 		score = 0;
 		pi = piCopy;
 		piCopy = 0;
@@ -46,7 +51,7 @@ public class HostEntry {
 				+ " count(" + String.valueOf(number) + "),"
 				+ " pi(" + String.valueOf(pi) + "),"
 				+ " score(" + String.valueOf((int)score) + "),"
-				+ " importance(" + String.valueOf(importance) + ").";
+				+ " level(" + String.valueOf(level) + ").";
 	}
 	public int getHighFlowNumber() {
 		return highFlowNumber;
@@ -71,8 +76,6 @@ public class HostEntry {
 
 		// pi part
 		int piScore = 0;
-		pi = piCopy;
-		piCopy = 0;
 		if (pi < ShieldManager.piLow) 		piScore = 2;
 		else if (pi < ShieldManager.piHigh) piScore = 1;
 		double tempScore = countScore + piScore;
@@ -82,6 +85,14 @@ public class HostEntry {
 		}
 		else
 			score = ShieldManager.alpha * tempScore + (1.0 - ShieldManager.alpha) * score;
+		
+		if (score < 1.0) {
+			level = 1;
+			// install drop entry (hard-timeout = 3s)
+			Forwarding.installDropEntry(ip, sw);
+		}
+		else if (score < 3.0) level = 2;
+		else level = 3;
 	}
 	
 	public void addHighCount(OFFlowStatsEntry pse) {

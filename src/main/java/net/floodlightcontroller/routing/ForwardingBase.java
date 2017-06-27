@@ -39,6 +39,7 @@ import net.floodlightcontroller.packet.IPacket;
 import net.floodlightcontroller.routing.IRoutingService;
 import net.floodlightcontroller.routing.IRoutingDecision;
 import net.floodlightcontroller.routing.Path;
+import net.floodlightcontroller.statistics.StatisticsCollector;
 import net.floodlightcontroller.topology.ITopologyService;
 import net.floodlightcontroller.util.FlowModUtils;
 import net.floodlightcontroller.util.MatchUtils;
@@ -58,6 +59,7 @@ import org.projectfloodlight.openflow.protocol.OFVersion;
 import org.projectfloodlight.openflow.protocol.action.OFAction;
 import org.projectfloodlight.openflow.protocol.action.OFActionOutput;
 import org.projectfloodlight.openflow.types.DatapathId;
+import org.projectfloodlight.openflow.types.IPv4Address;
 import org.projectfloodlight.openflow.types.MacAddress;
 import org.projectfloodlight.openflow.types.OFBufferId;
 import org.projectfloodlight.openflow.types.OFPort;
@@ -277,6 +279,17 @@ public abstract class ForwardingBase implements IOFMessageListener {
                         null, // TODO how to determine output VLAN for lookup of L2 interface group
                         outPort);
             } else {
+            	IPv4Address srcIp = mb.get(MatchField.IPV4_SRC);
+            	if (srcIp != null) {
+            		int level = 2;
+            		try {
+            			level = StatisticsCollector.hostFlowMap.get(srcIp).level;
+					} catch (Exception e) {
+						// TODO: handle exception
+						log.debug("###### {} NOT INSERTED", srcIp.toString());
+					}
+            		fmb.setImportance(level);
+            	}
                 messageDamper.write(sw, fmb.build());
             }
 

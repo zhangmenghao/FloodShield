@@ -14,6 +14,8 @@ import net.floodlightcontroller.packet.IPv4;
 import net.floodlightcontroller.packet.UDP;
 import net.floodlightcontroller.routing.IRoutingService;
 import net.floodlightcontroller.routing.Path;
+import net.floodlightcontroller.statistics.ShieldManager;
+import net.floodlightcontroller.statistics.StatisticsCollector;
 import net.floodlightcontroller.topology.ITopologyService;
 import net.floodlightcontroller.util.OFMessageDamper;
 import net.floodlightcontroller.util.OFMessageUtils;
@@ -188,6 +190,7 @@ public class DHCPPacketProcessor {
     }
 
     public void writeIPMACBindFlowToSw(IOFSwitch sw, IPv4Address ip, MacAddress mac, OFPort port) {
+    	ShieldManager.addHost(ip, sw);
         // new version
     	List<OFInstruction> instructions = new ArrayList<OFInstruction>();
     	OFInstructionGotoTable.Builder ib = sw.getOFFactory().instructions().buildGotoTable();
