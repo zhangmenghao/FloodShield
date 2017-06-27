@@ -277,12 +277,11 @@ public abstract class ForwardingBase implements IOFMessageListener {
             } else {
             	IPv4Address srcIp = mb.get(MatchField.IPV4_SRC);
             	if (srcIp != null) {
-            		int level = 2;
+            		int level = 3;
             		try {
             			level = StatisticsCollector.hostFlowMap.get(srcIp).level;
 					} catch (Exception e) {
 						// TODO: handle exception
-						log.debug("###### {} NOT INSERTED", srcIp.toString());
 					}
             		fmb.setImportance(level);
             	}

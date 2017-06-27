@@ -31,14 +31,13 @@ public class HostEntry {
 		score = 0;
 		piCopy = 0;
 		FIRST_SCORE = true;
-		level = -1;
+		level = 3;
 	}
 	
 	public void init() {
 		number = 0;
 		highFlowNumber = 0;
-		level = -1;
-		score = 0;
+		level = 3;
 		pi = piCopy;
 		piCopy = 0;
 	}
@@ -66,7 +65,7 @@ public class HostEntry {
 	public void compute() {
 		// count part
 		double temp = 0.0;
-		if (number == 0) temp = 0.000001;
+		if (number == 0) temp = ShieldManager.countHigh;
 		else
 			temp = (double)highFlowNumber / number;
 		temp *= 10;
@@ -86,12 +85,12 @@ public class HostEntry {
 		else
 			score = ShieldManager.alpha * tempScore + (1.0 - ShieldManager.alpha) * score;
 		
-		if (score < 1.0) {
+		if (score < ShieldManager.scoreLow) {
 			level = 1;
 			// install drop entry (hard-timeout = 3s)
 			Forwarding.installDropEntry(ip, sw);
 		}
-		else if (score < 3.0) level = 2;
+		else if (score < ShieldManager.scoreHigh) level = 2;
 		else level = 3;
 	}
 	

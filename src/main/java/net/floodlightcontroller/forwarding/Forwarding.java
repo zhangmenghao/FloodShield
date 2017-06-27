@@ -229,7 +229,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     	Match.Builder mb = sw.getOFFactory().buildMatch();
     	mb.setExact(MatchField.ETH_TYPE, EthType.IPv4);
     	mb.setExact(MatchField.IPV4_SRC, ip);
-    	int interval = StatisticsCollector.hostStatsInterval;
+    	int interval = 5;
 		OFFlowAdd defaultFlow = sw.getOFFactory().buildFlowAdd()
 		.setMatch(mb.build())
 		.setTableId(TableId.of(0))

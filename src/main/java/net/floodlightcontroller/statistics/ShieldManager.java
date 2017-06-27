@@ -9,6 +9,8 @@ import org.projectfloodlight.openflow.types.IPv4Address;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.sun.org.apache.xml.internal.resolver.helpers.PublicId;
+
 import net.floodlightcontroller.core.IFloodlightProviderService;
 import net.floodlightcontroller.core.IOFSwitch;
 import net.floodlightcontroller.core.module.FloodlightModuleContext;
@@ -32,6 +34,10 @@ public class ShieldManager implements IFloodlightModule {
 	private static final String COUNT_HIGH_STR = "counthigh";
 	public static int countLow = 0;
 	public static int countHigh = 0;
+	private static final String SCORE_LOW_STR = "scorelow";
+	private static final String SCORE_HIGH_STR = "scorehigh";
+	public static double scoreLow = 0.0;
+	public static double scoreHigh = 0.0;
 	
 	
 	public ShieldManager() {}
@@ -116,6 +122,22 @@ public class ShieldManager implements IFloodlightModule {
 				log.debug("######INIT-{} = {}", COUNT_HIGH_STR, countHigh);
 			} catch (Exception e) {
 				log.error("Could not parse '{}'. Using default of {}", COUNT_HIGH_STR, countHigh);
+			}
+		}
+		if (config.containsKey(SCORE_LOW_STR)) {
+			try {
+				scoreLow = Double.parseDouble(config.get(SCORE_LOW_STR).trim());
+				log.debug("######INIT-{} = {}", SCORE_LOW_STR, scoreLow);
+			} catch (Exception e) {
+				log.error("Could not parse '{}'. Using default of {}", SCORE_LOW_STR, scoreLow);
+			}
+		}
+		if (config.containsKey(SCORE_HIGH_STR)) {
+			try {
+				scoreHigh = Double.parseDouble(config.get(SCORE_HIGH_STR).trim());
+				log.debug("######INIT-{} = {}", SCORE_HIGH_STR, scoreHigh);
+			} catch (Exception e) {
+				log.error("Could not parse '{}'. Using default of {}", SCORE_HIGH_STR, scoreHigh);
 			}
 		}
 	}
