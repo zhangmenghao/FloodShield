@@ -31,13 +31,13 @@ public class HostEntry {
 		score = 0;
 		piCopy = 0;
 		FIRST_SCORE = true;
-		level = 3;
+		level = 2;
 	}
 	
 	public void init() {
 		number = 0;
 		highFlowNumber = 0;
-		level = 3;
+		level = 2;
 		pi = piCopy;
 		piCopy = 0;
 	}
@@ -65,7 +65,7 @@ public class HostEntry {
 	public void compute() {
 		// count part
 		double temp = 0.0;
-		if (number == 0) temp = ShieldManager.countHigh;
+		if (number < 2) temp = ShieldManager.countLow;
 		else
 			temp = (double)highFlowNumber / number;
 		temp *= 10;
