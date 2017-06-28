@@ -238,7 +238,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 		.setIdleTimeout(interval)
 		.setActions(actions)
 		.build();
-		log.info("###flowmod");
+//		log.info("###flowmod");
 		sw.write(defaultFlow);
     }
 
@@ -261,8 +261,11 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 	if (srcIp != null) {
                 		log.debug("######PACKET_IN-{}-", srcIp.toString());
                 		if (StatisticsCollector.hostFlowMap.containsKey(srcIp)) {
-                			if (StatisticsCollector.hostFlowMap.get(srcIp).level == 1) return Command.STOP;
+//                			if (StatisticsCollector.hostFlowMap.get(srcIp).level == 1) return Command.STOP;
                 			StatisticsCollector.hostFlowMap.get(srcIp).piCopy += 1;
+                			if (StatisticsCollector.hostFlowMap.get(srcIp).piCopy > ShieldManager.piHigh) {
+                				installDropEntry(srcIp, sw);
+                			}
                 		}
                 	}
                 }

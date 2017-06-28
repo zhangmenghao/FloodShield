@@ -3,6 +3,7 @@ package net.floodlightcontroller.statistics;
 import org.projectfloodlight.openflow.protocol.OFFlowStatsEntry;
 import org.projectfloodlight.openflow.protocol.match.Match;
 import org.projectfloodlight.openflow.types.IPv4Address;
+import org.python.antlr.PythonParser.else_clause_return;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +38,6 @@ public class HostEntry {
 	public void init() {
 		number = 0;
 		highFlowNumber = 0;
-		level = 2;
 		pi = piCopy;
 		piCopy = 0;
 	}
@@ -77,21 +77,14 @@ public class HostEntry {
 		int piScore = 0;
 		if (pi < ShieldManager.piLow) 		piScore = 2;
 		else if (pi < ShieldManager.piHigh) piScore = 1;
-		double tempScore = countScore + piScore;
-		if (FIRST_SCORE) {
-			FIRST_SCORE = false;
-			score = tempScore;
-		}
-		else
-			score = ShieldManager.alpha * tempScore + (1.0 - ShieldManager.alpha) * score;
 		
-		if (score < ShieldManager.scoreLow) {
-			level = 1;
-			// install drop entry (hard-timeout = 3s)
-			Forwarding.installDropEntry(ip, sw);
-		}
-		else if (score < ShieldManager.scoreHigh) level = 2;
-		else level = 3;
+		
+		if (piScore == 0 || countScore + piScore < 2) level = 1;
+		else if (piScore == 2 && countScore >= 1 && level != 1) level = 3;
+		else level = 2;
+		
+				
+//		if (level == 1) Forwarding.installDropEntry(ip, sw);
 	}
 	
 	public void addHighCount(OFFlowStatsEntry pse) {
