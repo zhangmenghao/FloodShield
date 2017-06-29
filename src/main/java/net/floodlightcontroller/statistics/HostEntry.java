@@ -78,8 +78,15 @@ public class HostEntry {
 		if (pi < ShieldManager.piLow) 		piScore = 2;
 		else if (pi < ShieldManager.piHigh) piScore = 1;
 		
+		if (FIRST_SCORE) {
+			FIRST_SCORE = false;
+			score = piScore + countScore;
+		} else {
+			score = ShieldManager.alpha * (piScore + countScore) + (1 - ShieldManager.alpha) * score;
+		}
 		
-		if (piScore == 0 || countScore + piScore < 2) level = 1;
+		
+		if (piScore == 0 || score < 1.7) level = 1;
 		else if (piScore == 2 && countScore >= 1 && level != 1) level = 3;
 		else level = 2;
 		
