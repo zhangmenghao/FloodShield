@@ -244,6 +244,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 
     @Override
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
+    	log.info("######MESSAGE");
         Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
         IPv4Address srcIp = null;
         if (eth.getEtherType() == EthType.IPv4) {
