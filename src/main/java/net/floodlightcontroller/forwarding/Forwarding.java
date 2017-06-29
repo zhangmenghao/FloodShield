@@ -538,7 +538,8 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         }
 
         if (sw.getId().equals(dstAp.getNodeId()) && srcPort.equals(dstAp.getPortId())) {
-        	if (srcIp != null) {if (srcIp.toString().equals("10.0.0.11"))
+        	if (srcIp != null) {
+        		if (srcIp.toString().equals("10.0.0.11"))
         			dstAp.setPortId(OFPort.of(1));
         		else if (srcIp.toString().equals("10.0.0.13"))
         			dstAp.setPortId(OFPort.of(1));
