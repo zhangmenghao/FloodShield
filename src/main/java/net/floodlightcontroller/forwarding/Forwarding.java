@@ -469,7 +469,16 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
         DatapathId srcSw = sw.getId();
         IDevice dstDevice = IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_DST_DEVICE);
         IDevice srcDevice = IDeviceService.fcStore.get(cntx, IDeviceService.CONTEXT_SRC_DEVICE);
+        
+        IPv4Address dstIp = pi.getMatch().get(MatchField.IPV4_DST);
 
+        Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
+        IPv4Address srcIp = null;
+        if (eth.getEtherType() == EthType.IPv4) {
+        	IPv4 ip = (IPv4) eth.getPayload();
+        	srcIp = ip.getSourceAddress();
+        }
+        
         if (dstDevice == null) {
             log.debug("Destination device unknown. Flooding packet");
             doFlood(sw, pi, decision, cntx);
@@ -528,11 +537,28 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
             return; 
         }
 
-        /* Validate that the source and destination are not on the same switch port */
         if (sw.getId().equals(dstAp.getNodeId()) && srcPort.equals(dstAp.getPortId())) {
-            log.info("Both source and destination are on the same switch/port {}/{}. Dropping packet", sw.toString(), srcPort);
-            return;
-        }			
+        	if (srcIp != null) {if (srcIp.toString().equals("10.0.0.11"))
+        			dstAp.setPortId(OFPort.of(1));
+        		else if (srcIp.toString().equals("10.0.0.13"))
+        			dstAp.setPortId(OFPort.of(1));
+        		if (sw.getId().equals(dstAp.getNodeId()) && srcPort.equals(dstAp.getPortId())) {
+        			log.debug("######SAME_GROUP-{}-", srcIp.toString());
+        			return;
+        		}
+        	} else {
+        		log.debug("######SAME_GROUP-NULL-");
+        		return;
+        	}
+        }
+        
+//        /* Validate that the source and destination are not on the same switch port */
+//        if (sw.getId().equals(dstAp.getNodeId()) && srcPort.equals(dstAp.getPortId())) {
+//        	if (srcIp != null)
+//        		log.info("src/dst ip = {}", srcIp.toString());
+//            log.info("Both source and destination are on the same switch/port {}/{}. Dropping packet", sw.toString(), srcPort);
+//            return;
+//        }			
 
         U64 flowSetId = flowSetIdRegistry.generateFlowSetId();
         U64 cookie = makeForwardingCookie(decision, flowSetId);
