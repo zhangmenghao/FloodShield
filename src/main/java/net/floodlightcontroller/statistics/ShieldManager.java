@@ -21,7 +21,7 @@ public class ShieldManager implements IFloodlightModule {
 	private static final String ALPHA_STR = "alpha";
 	private static final String HIGH_COUNT_STR = "highcount";
 	public static double alpha = 0;
-	public static int highCount = 0;
+	public static int highCount = 1;
 	private static final String PI_LOW_STR = "pilow";
 	private static final String PI_HIGH_STR = "pihigh";
 	public static int piLow = 0;

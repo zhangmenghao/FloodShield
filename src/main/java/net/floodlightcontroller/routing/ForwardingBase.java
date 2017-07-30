@@ -82,7 +82,7 @@ public abstract class ForwardingBase implements IOFMessageListener {
 
     protected static TableId FLOWMOD_DEFAULT_TABLE_ID = TableId.ZERO;
 
-    protected static boolean FLOWMOD_DEFAULT_SET_SEND_FLOW_REM_FLAG = false;
+    protected static boolean FLOWMOD_DEFAULT_SET_SEND_FLOW_REM_FLAG = true;
 
     protected static boolean FLOWMOD_DEFAULT_MATCH_IN_PORT = true;
     protected static boolean FLOWMOD_DEFAULT_MATCH_VLAN = true;
@@ -129,6 +129,7 @@ public abstract class ForwardingBase implements IOFMessageListener {
 
     protected void startUp() {
         floodlightProviderService.addOFMessageListener(OFType.PACKET_IN, this);
+        floodlightProviderService.addOFMessageListener(OFType.FLOW_REMOVED, this);
     }
 
     @Override
@@ -236,14 +237,12 @@ public abstract class ForwardingBase implements IOFMessageListener {
             aob.setMaxLen(Integer.MAX_VALUE);
             actions.add(aob.build());
 
-            if (FLOWMOD_DEFAULT_SET_SEND_FLOW_REM_FLAG || requestFlowRemovedNotification) {
-                Set<OFFlowModFlags> flags = new HashSet<>();
-                flags.add(OFFlowModFlags.SEND_FLOW_REM);
-                fmb.setFlags(flags);
-            }
+            Set<OFFlowModFlags> flags = new HashSet<>();
+            flags.add(OFFlowModFlags.SEND_FLOW_REM);
+            fmb.setFlags(flags);
 
             fmb.setMatch(mb.build())
-            .setIdleTimeout(FLOWMOD_DEFAULT_IDLE_TIMEOUT)
+            .setIdleTimeout(5)
             .setHardTimeout(FLOWMOD_DEFAULT_HARD_TIMEOUT)
             .setBufferId(OFBufferId.NO_BUFFER)
             .setCookie(cookie)
@@ -283,6 +282,14 @@ public abstract class ForwardingBase implements IOFMessageListener {
 					} catch (Exception e) {
 						// TODO: handle exception
 					}
+
+            		if (srcIp.toString().equals("10.0.0.1")) level = 3;
+            		else if (srcIp.toString().equals("10.0.0.11")) level = 3;
+            		else if (srcIp.toString().equals("10.0.0.2")) level = 3;
+            		else if (srcIp.toString().equals("10.0.0.12")) level = 3;
+            		
+            		if (level == 1) fmb.setIdleTimeout(1);
+            		else if (level == 2) fmb.setIdleTimeout(2);
             		fmb.setImportance(level);
             	}
                 messageDamper.write(sw, fmb.build());

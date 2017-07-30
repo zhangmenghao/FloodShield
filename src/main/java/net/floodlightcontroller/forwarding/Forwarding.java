@@ -58,6 +58,7 @@ import net.floodlightcontroller.util.ParseUtils;
 import org.projectfloodlight.openflow.protocol.OFFlowAdd;
 import org.projectfloodlight.openflow.protocol.OFFlowMod;
 import org.projectfloodlight.openflow.protocol.OFFlowModCommand;
+import org.projectfloodlight.openflow.protocol.OFFlowRemoved;
 import org.projectfloodlight.openflow.protocol.OFGroupType;
 import org.projectfloodlight.openflow.protocol.OFMessage;
 import org.projectfloodlight.openflow.protocol.OFPacketIn;
@@ -244,16 +245,16 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 
     @Override
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
-    	log.info("######MESSAGE");
+//    	log.info("######MESSAGE");
         Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
         IPv4Address srcIp = null;
-        if (eth.getEtherType() == EthType.IPv4) {
-        	IPv4 ip = (IPv4) eth.getPayload();
-        	srcIp = ip.getSourceAddress();
-        	if (!srcIp.toString().equals("0.0.0.0")) ShieldManager.addHost(srcIp, sw);
-        }
         switch (msg.getType()) {
             case PACKET_IN:
+                if (eth.getEtherType() == EthType.IPv4) {
+                	IPv4 ip = (IPv4) eth.getPayload();
+                	srcIp = ip.getSourceAddress();
+                	if (!srcIp.toString().equals("0.0.0.0")) ShieldManager.addHost(srcIp, sw);
+                }
                 IRoutingDecision decision = null;
                 if (cntx != null) {
                     decision = RoutingDecision.rtStore.get(cntx, IRoutingDecision.CONTEXT_DECISION);
@@ -272,7 +273,13 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 }
                 return this.processPacketInMessage(sw, (OFPacketIn) msg, decision, cntx);
             case FLOW_REMOVED:
-                log.debug("###remove"+sw.getId().toString());
+            	try {
+            		OFFlowRemoved flowRemoved = (OFFlowRemoved) msg;
+            		IPv4Address ip = flowRemoved.getMatch().get(MatchField.IPV4_SRC);
+                    log.info("###### PACKET_REMOVED - {};", ip.toString());
+            	} catch (Exception e) {
+            		log.info("$$$$$$$$$$$");
+            	}
             default:
                 break;
         }
@@ -294,7 +301,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 return Command.CONTINUE;
             case FORWARD_OR_FLOOD:
             case FORWARD:
-                doForwardFlow(sw, pi, decision, cntx, false);
+                doForwardFlow(sw, pi, decision, cntx, true);
                 return Command.CONTINUE;
             case MULTICAST:
                 // treat as broadcast
@@ -315,7 +322,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
             if (eth.isBroadcast() || eth.isMulticast()) {
                 doFlood(sw, pi, decision, cntx);
             } else {
-                doForwardFlow(sw, pi, decision, cntx, false);
+                doForwardFlow(sw, pi, decision, cntx, true);
             }
         }
 

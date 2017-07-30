@@ -128,10 +128,10 @@ public class OFMessageDamper {
         if (cache.update(entry)) {
             // entry exists in cache. Dampening.
             log.debug("Dampening cached msg {}", msg);
-            return false; 
+            return false;
         } else {
             log.debug("Not dampening new msg {}", msg);
-            log.info("######MESSAGE");
+//            log.info("######MESSAGE");
             sw.write(msg);
             return true;
         }
