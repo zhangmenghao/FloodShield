@@ -101,6 +101,8 @@ public abstract class ForwardingBase implements IOFMessageListener {
     protected static boolean FLOOD_ALL_ARP_PACKETS = false;
 
     protected static boolean REMOVE_FLOWS_ON_LINK_OR_PORT_DOWN = true;
+    
+    public static int roundJudge = 1;
 
     protected IFloodlightProviderService floodlightProviderService;
     protected IOFSwitchService switchService;
@@ -283,10 +285,18 @@ public abstract class ForwardingBase implements IOFMessageListener {
 						// TODO: handle exception
 					}
 
-            		if (srcIp.toString().equals("10.0.0.1")) level = 3;
-            		else if (srcIp.toString().equals("10.0.0.11")) level = 3;
-            		else if (srcIp.toString().equals("10.0.0.2")) level = 3;
-            		else if (srcIp.toString().equals("10.0.0.12")) level = 3;
+            		boolean normal = false;
+            		
+            		if (srcIp.toString().equals("10.0.0.1")) normal = true;
+            		else if (srcIp.toString().equals("10.0.0.11")) normal = true;
+            		else if (srcIp.toString().equals("10.0.0.2")) normal = true;
+            		else if (srcIp.toString().equals("10.0.0.12")) normal = true;
+            		
+            		if (normal) {
+            			roundJudge += 1;
+            			if (roundJudge < 9) level = 3;
+            			if (roundJudge >= 10) roundJudge = 1;
+            		}
             		
             		if (level == 1) fmb.setIdleTimeout(1);
             		else if (level == 2) fmb.setIdleTimeout(2);
