@@ -50,6 +50,7 @@ import net.floodlightcontroller.statistics.StatisticsCollector;
 import net.floodlightcontroller.topology.ITopologyService;
 import net.floodlightcontroller.util.FlowModUtils;
 import net.floodlightcontroller.util.OFDPAUtils;
+import net.floodlightcontroller.util.OFMessageDamper;
 import net.floodlightcontroller.util.OFMessageUtils;
 import net.floodlightcontroller.util.OFPortMode;
 import net.floodlightcontroller.util.OFPortModeTuple;
@@ -64,6 +65,7 @@ import org.projectfloodlight.openflow.protocol.OFMessage;
 import org.projectfloodlight.openflow.protocol.OFPacketIn;
 import org.projectfloodlight.openflow.protocol.OFPacketOut;
 import org.projectfloodlight.openflow.protocol.OFPortDesc;
+import org.projectfloodlight.openflow.protocol.OFType;
 import org.projectfloodlight.openflow.protocol.OFVersion;
 import org.projectfloodlight.openflow.protocol.action.OFAction;
 import org.projectfloodlight.openflow.protocol.match.Match;
@@ -129,6 +131,8 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     public static HashMap<DatapathId, DatapathCollector> datapathMap;
     public static HashMap<IPv4Address, PacketInCollector> hostPacketInMap;
     public static PacketInCollector totalPacketIn;
+    
+    protected OFMessageDamper messageDamper;
 
     protected static class FlowSetIdRegistry {
         private volatile Map<NodePortTuple, Set<U64>> nptToFlowSetIds;
@@ -240,12 +244,15 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 		.setActions(actions)
 		.build();
 //		log.info("###flowmod");
+//		messageDamper.write(sw, defaultFlow);
+		log.info("###### MESSAGE");
 		sw.write(defaultFlow);
+		
     }
 
     @Override
     public Command receive(IOFSwitch sw, OFMessage msg, FloodlightContext cntx) {
-//    	log.info("######MESSAGE");
+    	log.info("###### MESSAGE");
         Ethernet eth = IFloodlightProviderService.bcStore.get(cntx, IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
         IPv4Address srcIp = null;
         switch (msg.getType()) {
@@ -276,7 +283,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
             	try {
             		OFFlowRemoved flowRemoved = (OFFlowRemoved) msg;
             		IPv4Address ip = flowRemoved.getMatch().get(MatchField.IPV4_SRC);
-                    log.info("###### PACKET_REMOVED - {};", ip.toString());
+//                    log.info("###### PACKET_REMOVED - {};", ip.toString());
             	} catch (Exception e) {
             		log.info("$$$$$$$$$$$");
             	}
@@ -835,6 +842,10 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
     @Override
     public void init(FloodlightModuleContext context) throws FloodlightModuleException {
         super.init();
+        
+        messageDamper = new OFMessageDamper(10000,
+                EnumSet.of(OFType.FLOW_MOD),
+                250);
         this.floodlightProviderService = context.getServiceImpl(IFloodlightProviderService.class);
         this.deviceManagerService = context.getServiceImpl(IDeviceService.class);
         this.routingEngineService = context.getServiceImpl(IRoutingService.class);

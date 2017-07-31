@@ -131,7 +131,7 @@ public class OFMessageDamper {
             return false;
         } else {
             log.debug("Not dampening new msg {}", msg);
-//            log.info("######MESSAGE");
+            log.info("###### MESSAGE");
             sw.write(msg);
             return true;
         }
