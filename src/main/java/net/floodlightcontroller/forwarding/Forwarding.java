@@ -243,7 +243,6 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 		.setIdleTimeout(interval)
 		.setActions(actions)
 		.build();
-//		log.info("###flowmod");
 //		messageDamper.write(sw, defaultFlow);
 		log.info("###### MESSAGE");
 		sw.write(defaultFlow);
@@ -260,7 +259,10 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
                 if (eth.getEtherType() == EthType.IPv4) {
                 	IPv4 ip = (IPv4) eth.getPayload();
                 	srcIp = ip.getSourceAddress();
-                	if (!srcIp.toString().equals("0.0.0.0")) ShieldManager.addHost(srcIp, sw);
+                	if (srcIp.toString().startsWith("10.0.0.")) ShieldManager.addHost(srcIp, sw);
+//                	else if (!srcIp.toString().equals("0.0.0.0")) {
+//                		return Command.STOP;
+//                	}
                 }
                 IRoutingDecision decision = null;
                 if (cntx != null) {
@@ -554,12 +556,8 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule, IOF
 
         if (sw.getId().equals(dstAp.getNodeId()) && srcPort.equals(dstAp.getPortId())) {
         	if (srcIp != null) {
-        		if (srcIp.toString().equals("10.0.0.11"))
-        			dstAp.setPortId(OFPort.of(1));
-        		else if (srcIp.toString().equals("10.0.0.13"))
-        			dstAp.setPortId(OFPort.of(1));
         		if (sw.getId().equals(dstAp.getNodeId()) && srcPort.equals(dstAp.getPortId())) {
-        			log.debug("######SAME_GROUP-{}-", srcIp.toString());
+        			log.info("Both source and destination are on the same switch/port {}/{}. Dropping packet", sw.toString(), srcPort);
         			return;
         		}
         	} else {

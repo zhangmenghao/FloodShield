@@ -43,7 +43,7 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 
 	private static final HashMap<NodePortTuple, SwitchPortBandwidth> portStats = new HashMap<NodePortTuple, SwitchPortBandwidth>();
 	private static final HashMap<NodePortTuple, SwitchPortBandwidth> tentativePortStats = new HashMap<NodePortTuple, SwitchPortBandwidth>();
-	
+
 	// FT-Guard part
 	private static boolean isEnabled = true;
 	public static int hostStatsInterval = 3;
@@ -53,7 +53,7 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 		= new HashMap<IPv4Address, HostEntry>();
 	public static final HashMap<IPv4Address, DatapathId> hostDpMap
 		= new HashMap<IPv4Address, DatapathId>();
-	
+
 	/**
 	 * Run periodically to collect all port statistics. This only collects
 	 * bandwidth stats right now, but it could be expanded to record other
@@ -114,7 +114,7 @@ public class StatisticsCollector implements IFloodlightModule, IStatisticsServic
 			}
 		}
 	}
-	
+
 	/**
 	 * Single thread for collecting switch statistics and
 	 * containing the reply.

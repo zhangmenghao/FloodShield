@@ -300,7 +300,7 @@ public abstract class ForwardingBase implements IOFMessageListener {
             		
             		if (level == 1) fmb.setIdleTimeout(1);
             		else if (level == 2) fmb.setIdleTimeout(2);
-            		fmb.setImportance(level);
+//            		fmb.setImportance(level);
             	}
                 messageDamper.write(sw, fmb.build());
             }
